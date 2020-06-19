@@ -108,12 +108,8 @@ If ROOT is non-nil, omit some conditions."
                 (title* (mustache-render title org-generate-mustache-info)))
       (when (and (not (string-suffix-p "/" title*)) (cdr heading))
         (error "Heading %s is not suffixed \"/\", but it have childlen" title*))
-      ;; (if (string-suffix-p "/" title*)
-      ;;     (mkdir title* 'parent)
-      ;;   (with-temp-file title*
-      ;;     (insert (format "%s/%s" tree title*))))
       (if (string-suffix-p "/" title*)
-          (message (format "mkdir: %s" (expand-file-name title* default-directory)))
+          (mkdir (expand-file-name title* default-directory) 'parent)
         (let ((src
                (save-restriction
                  (narrow-to-region
@@ -125,13 +121,10 @@ If ROOT is non-nil, omit some conditions."
                  (org-element-src-block-parser (point-max) nil))))
           (unless src
             (error "Node %s has no src block" title*))
-          (let* ((srcbody (plist-get (cadr src) :value))
+          (let* ((srcbody (org-remove-indentation (plist-get (cadr src) :value)))
                  (srcbody* (mustache-render srcbody org-generate-mustache-info)))
-            (message (format "file: %s, %s"
-                            (expand-file-name title* default-directory)
-                            (progn
-                              (string-match ".*" srcbody*)
-                              (match-string 0 srcbody*)))))))
+            (with-temp-file (expand-file-name title* default-directory)
+              (insert srcbody*)))))
       (dolist (elm (cdr heading))
         (let ((default-directory
                 (expand-file-name title* default-directory)))
