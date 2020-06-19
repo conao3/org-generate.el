@@ -93,14 +93,37 @@
                 (tmp (funcall fn h2 tmp)))
       tmp)))
 
+(defun org-generate-1 (root heading)
+  "Generate file from HEADING.
+If ROOT is non-nil, omit some conditions."
+  (if root
+      (dolist (elm heading)
+        (org-generate-1 nil elm))
+    (when-let (title (plist-get (car-safe heading) :title))
+      (when (and (not (string-suffix-p "/" title)) (cdr heading))
+        (error "Heading %s is not suffixed \"/\", but it have childlen" title))
+      ;; (if (string-suffix-p "/" title)
+      ;;     (mkdir title 'parent)
+      ;;   (with-temp-file title
+      ;;     (insert (format "%s/%s" tree title))))
+      (if (string-suffix-p "/" title)
+          (message (format "mkdir: %s" (expand-file-name title default-directory)))
+        (message (format "file: %s" (expand-file-name title default-directory))))
+      (dolist (elm (cdr heading))
+        (let ((default-directory
+                (expand-file-name title default-directory)))
+          (org-generate-1 nil elm))))))
+
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
   (interactive (list
                 (completing-read
                  "Generate: "
                  (org-generate-candidate) nil 'match)))
-  (message
-   (prin1-to-string (org-generate-search-heading target))))
+  (let ((heading (org-generate-search-heading target)))
+    (if (not heading)
+        (error "%s is not defined from %s" target org-generate-file)
+      (org-generate-1 t heading))))
 
 (provide 'org-generate)
 
