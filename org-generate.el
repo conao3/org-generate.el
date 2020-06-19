@@ -99,7 +99,8 @@ If ROOT is non-nil, omit some conditions."
   (if root
       (dolist (elm heading)
         (org-generate-1 nil elm))
-    (when-let (title (plist-get (car-safe heading) :title))
+    (when-let* ((heading* (car-safe heading))
+                (title (plist-get heading* :title)))
       (when (and (not (string-suffix-p "/" title)) (cdr heading))
         (error "Heading %s is not suffixed \"/\", but it have childlen" title))
       ;; (if (string-suffix-p "/" title)
@@ -108,7 +109,23 @@ If ROOT is non-nil, omit some conditions."
       ;;     (insert (format "%s/%s" tree title))))
       (if (string-suffix-p "/" title)
           (message (format "mkdir: %s" (expand-file-name title default-directory)))
-        (message (format "file: %s" (expand-file-name title default-directory))))
+        (let ((src
+               (save-restriction
+                 (narrow-to-region
+                  (plist-get heading* :begin) (plist-get heading* :end))
+                 (goto-char (point-min))
+                 (let ((case-fold-search t))
+                   (when (search-forward "#+begin_src" nil 'noerror)
+                     (goto-char (match-beginning 0))))
+                 (org-element-src-block-parser (point-max) nil))))
+          (unless src
+            (error "Node %s has no src block" title))
+          (let ((srcbody (plist-get (cadr src) :value)))
+            (message (format "file: %s, %s"
+                            (expand-file-name title default-directory)
+                            (progn
+                              (string-match ".*" srcbody)
+                              (match-string 0 srcbody)))))))
       (dolist (elm (cdr heading))
         (let ((default-directory
                 (expand-file-name title default-directory)))
@@ -121,16 +138,17 @@ If ROOT is non-nil, omit some conditions."
                 (completing-read
                  "Generate: "
                  (org-generate-candidate) nil 'match)))
-  (let ((heading (org-generate-search-heading target)))
-    (when (not heading)
-      (error "%s is not defined at %s" target org-generate-file))
-    (let ((root (or org-generate-root
-                    (plist-get (car heading) :ORG-GENERATE-ROOT)
-                    (read-file-name "Generate root: "))))
-      (when (not (file-directory-p root))
-        (error "%s is not directory" root))
-      (let ((default-directory root))
-        (org-generate-1 t heading)))))
+  (with-current-buffer (org-generate-file-buffer)
+    (let ((heading (org-generate-search-heading target)))
+      (when (not heading)
+        (error "%s is not defined at %s" target org-generate-file))
+      (let ((root (or org-generate-root
+                      (plist-get (car heading) :ORG-GENERATE-ROOT)
+                      (read-file-name "Generate root: "))))
+        (when (not (file-directory-p root))
+          (error "%s is not directory" root))
+        (let ((default-directory root))
+          (org-generate-1 t heading))))))
 
 (provide 'org-generate)
 
