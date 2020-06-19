@@ -1,0 +1,9 @@
+;; Keg
+
+(source gnu melpa)
+
+(package
+ (org-generate
+   (recipe . (org-generate :fetcher github :repo "conao3/org-generate.el"))))
+
+(dev-dependency cort)
