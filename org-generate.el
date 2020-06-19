@@ -28,6 +28,7 @@
 
 ;;; Code:
 
+(require 'subr-x)
 (require 'org)
 (require 'org-element)
 
@@ -48,7 +49,7 @@
       (setq org-generate--file-buffer
             (find-file-noselect org-generate-file))))
 
-(defun org-generate-heading ()
+(defun org-generate-get-heading ()
   "Get `org' heading."
   (with-current-buffer (org-generate-file-buffer)
     (letrec ((fn (lambda (elm)
@@ -67,7 +68,7 @@
 (defun org-generate-candidate ()
   "Get `org' candidate heading for `current-buffer'."
   (let (res)
-    (dolist (h1 (org-generate-heading))
+    (dolist (h1 (org-generate-get-heading))
       (dolist (h2 (cdr h1))
         (push (format "%s/%s"
                       (plist-get (car h1) :raw-value)
@@ -75,13 +76,31 @@
               res)))
     (nreverse res)))
 
+(defun org-generate-search-heading (queue)
+  "Search QUEUE from `org-generate-get-heading'."
+  (let* ((fn (lambda (h seq)
+               (cl-find-if
+                (lambda (elm)
+                  (cl-find-if
+                   (lambda (e)
+                     (string= h (plist-get e :raw-value)))
+                   elm))
+                seq)))
+         (lst (split-string queue "/"))
+         (h1 (nth 0 lst))
+         (h2 (nth 1 lst)))
+    (when-let* ((tmp (funcall fn h1 (org-generate-get-heading)))
+                (tmp (funcall fn h2 tmp)))
+      tmp)))
+
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
   (interactive (list
                 (completing-read
                  "Generate: "
                  (org-generate-candidate) nil 'match)))
-  target)
+  (message
+   (prin1-to-string (org-generate-search-heading target))))
 
 (provide 'org-generate)
 
