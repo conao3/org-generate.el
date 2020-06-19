@@ -114,6 +114,7 @@ If ROOT is non-nil, omit some conditions."
                 (expand-file-name title default-directory)))
           (org-generate-1 nil elm))))))
 
+(defvar org-generate-root nil)
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
   (interactive (list
@@ -123,7 +124,13 @@ If ROOT is non-nil, omit some conditions."
   (let ((heading (org-generate-search-heading target)))
     (when (not heading)
       (error "%s is not defined at %s" target org-generate-file))
-    (org-generate-1 t heading)))
+    (let ((root (or org-generate-root
+                    (plist-get (car heading) :ORG-GENERATE-ROOT)
+                    (read-file-name "Generate root: "))))
+      (when (not (file-directory-p root))
+        (error "%s is not directory" root))
+      (let ((default-directory root))
+        (org-generate-1 t heading)))))
 
 (provide 'org-generate)
 
