@@ -122,7 +122,7 @@ If ROOT is non-nil, omit some conditions."
                  (org-generate-candidate) nil 'match)))
   (let ((heading (org-generate-search-heading target)))
     (when (not heading)
-      (error "%s is not defined from %s" target org-generate-file))
+      (error "%s is not defined at %s" target org-generate-file))
     (org-generate-1 t heading)))
 
 (provide 'org-generate)
