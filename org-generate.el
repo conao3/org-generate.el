@@ -56,7 +56,7 @@
                     (lambda (elm)
                       (when (eq (car elm) 'headline)
                         (cons
-                         (plist-get (nth 1 elm) :raw-value)
+                         (nth 1 elm)
                          (funcall fn (cddr elm)))))
                     elm))))
       (let ((heading (funcall
@@ -66,7 +66,10 @@
             res)
         (dolist (h1 heading)
           (dolist (h2 (cdr h1))
-            (push (format "%s/%s" (car h1) (car h2)) res)))
+            (push (format "%s/%s"
+                          (plist-get (car h1) :raw-value)
+                          (plist-get (car h2) :raw-value))
+                  res)))
         (nreverse res)))))
 
 (defun org-generate (target)
