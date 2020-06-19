@@ -29,6 +29,7 @@
 ;;; Code:
 
 (require 'org)
+(require 'org-element)
 
 (defgroup org-generate nil
   "Generate template files/folders from org document."
@@ -39,6 +40,34 @@
   "File template definition path."
   :group 'org-generate
   :type 'string)
+
+(defvar org-generate--file-buffer nil)
+(defun org-generate-file-buffer ()
+  "Return org-generate file buffer."
+  (or org-generate--file-buffer
+      (setq org-generate--file-buffer
+            (find-file-noselect org-generate-file))))
+
+(defun org-generate-candidate ()
+  "Get `org' candidate heading for `current-buffer'."
+  (with-current-buffer (org-generate-file-buffer)
+    (letrec ((fn (lambda (elm)
+                   (mapcar
+                    (lambda (elm)
+                      (when (eq (car elm) 'headline)
+                        (cons
+                         (plist-get (nth 1 elm) :raw-value)
+                         (funcall fn (cddr elm)))))
+                    elm))))
+      (let ((heading (funcall
+                      fn
+                      (org-element-contents
+                       (org-element-parse-buffer 'headline))))
+            res)
+        (dolist (h1 heading)
+          (dolist (h2 (cdr h1))
+            (push (format "%s/%s" (car h1) (car h2)) res)))
+        (nreverse res)))))
 
 (provide 'org-generate)
 
