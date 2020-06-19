@@ -241,18 +241,12 @@ if you want a more casual conversation.
 We welcome PR!
 
 *** Require tools for testing
-- cask
-  - install via brew
-    #+begin_src shell
-      brew install cask
-    #+end_src
-
-  - manual install
-    #+begin_src shell
-      cd ~/
-      hub clone cask/cask
-      export PATH="$HOME/.cask/bin:$PATH"
-    #+end_src
+- keg
+  #+begin_src shell
+    cd ~/
+    hub clone conao3/keg .keg
+    export PATH="$HOME/.keg/bin:$PATH"
+  #+end_src
 
 *** Running test
 Below operation flow is recommended.
