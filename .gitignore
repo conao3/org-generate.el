@@ -2,4 +2,4 @@
 
 *-autoloads.el
 *.elc
-/.cask
+/.keg
