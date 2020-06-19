@@ -5,7 +5,7 @@
 ;; Author: Naoya Yamashita <conao3@gmail.com>
 ;; Version: 0.0.1
 ;; Keywords: convenience
-;; Package-Requires: ((emacs "26.1") (org "9.3"))
+;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23") (ht "2.2"))
 ;; URL: https://github.com/conao3/org-generate.el
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,8 @@
 (require 'subr-x)
 (require 'org)
 (require 'org-element)
+(require 'mustache)
+(require 'ht)                           ; for mustache utility
 
 (defgroup org-generate nil
   "Generate template files/folders from org document."
