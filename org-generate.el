@@ -154,7 +154,9 @@ If ROOT is non-nil, omit some conditions."
                     (mapcar (lambda (elm)
                               (cons elm (read-string (format "%s: " elm))))
                             vars)))))
-          (org-generate-1 t heading))))))
+          (org-generate-1 t heading))
+        (when (called-interactively-p 'interactive)
+          (dired root))))))
 
 (provide 'org-generate)
 
