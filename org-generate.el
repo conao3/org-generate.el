@@ -156,10 +156,11 @@ If ROOT is non-nil, omit some conditions."
           (error "%s is not directory" root))
         (let ((default-directory root)
               (org-generate-mustache-info
-               (ht<-alist
-                (mapcar (lambda (elm)
-                          (cons elm (read-string (format "%s: " elm))))
-                        vars))))
+               (or org-generate-mustache-info
+                   (ht<-alist
+                    (mapcar (lambda (elm)
+                              (cons elm (read-string (format "%s: " elm))))
+                            vars)))))
           (org-generate-1 t heading))))))
 
 (provide 'org-generate)
