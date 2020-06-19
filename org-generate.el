@@ -48,8 +48,8 @@
       (setq org-generate--file-buffer
             (find-file-noselect org-generate-file))))
 
-(defun org-generate-candidate ()
-  "Get `org' candidate heading for `current-buffer'."
+(defun org-generate-heading ()
+  "Get `org' heading."
   (with-current-buffer (org-generate-file-buffer)
     (letrec ((fn (lambda (elm)
                    (mapcar
@@ -59,18 +59,21 @@
                          (nth 1 elm)
                          (funcall fn (cddr elm)))))
                     elm))))
-      (let ((heading (funcall
-                      fn
-                      (org-element-contents
-                       (org-element-parse-buffer 'headline))))
-            res)
-        (dolist (h1 heading)
-          (dolist (h2 (cdr h1))
-            (push (format "%s/%s"
-                          (plist-get (car h1) :raw-value)
-                          (plist-get (car h2) :raw-value))
-                  res)))
-        (nreverse res)))))
+      (funcall
+       fn
+       (org-element-contents
+        (org-element-parse-buffer 'headline))))))
+
+(defun org-generate-candidate ()
+  "Get `org' candidate heading for `current-buffer'."
+  (let (res)
+    (dolist (h1 (org-generate-heading))
+      (dolist (h2 (cdr h1))
+        (push (format "%s/%s"
+                      (plist-get (car h1) :raw-value)
+                      (plist-get (car h2) :raw-value))
+              res)))
+    (nreverse res)))
 
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
