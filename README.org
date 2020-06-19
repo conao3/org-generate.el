@@ -226,7 +226,7 @@ When called interactively, it presents the folder where the template is extracte
 
 * Customize
 - org-generate-file :: The org file is used as temprate definition.
-  (default ={{org-directory}}/org-generate.org=)
+  (default ={{user-emacs-directory}}/org-generate.org=)
 
   =M-x org-generate-edit= to edit template file.
 

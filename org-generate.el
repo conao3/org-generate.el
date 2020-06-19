@@ -39,7 +39,7 @@
   :group 'convenience
   :link '(url-link :tag "Github" "https://github.com/conao3/org-generate.el"))
 
-(defcustom org-generate-file (expand-file-name "org-generate.org" org-directory)
+(defcustom org-generate-file (locate-user-emacs-file "org-generate.org")
   "File template definition path."
   :group 'org-generate
   :type 'string)
