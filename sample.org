@@ -14,10 +14,10 @@
 # One file template example.
 # To create file named as page in `org-generate-root`, do
 #   M-x org-generate hugo/page
-*** page
+*** page.md
 #+begin_src markdown
   ---
-  title: "xxx
+  title: "xxx"
   date: xx/xx/xx
   draft: true
   ---
@@ -28,6 +28,27 @@
   ### 2. Second
   yyyy
 #+end_src
+** single
+:PROPERTIES:
+:org-generate-root: ~/dev/repos/hugo-src/content/blog/
+:org-generate-variable: title date
+:END:
+*** {{title}}.md
+#+begin_src markdown
+  ---
+  title: {{title}}
+  date: {{date}}
+  category: single
+  draft: true
+  ---
+
+  ### 1. First
+  xxxx
+
+  ### 2. Second
+  yyyy
+#+end_src
+
 * yasnippet
 ** default
 :PROPERTIES:

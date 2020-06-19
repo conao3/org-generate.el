@@ -24,15 +24,214 @@
   - [[#contributors][Contributors]]
 
 * Description
-Generate template files/folders from org document.
+Generate template files/folders from one org document.
+
 * Install
 #+begin_src emacs-lisp
   (leaf org-generate :ensure t)
 #+end_src
 
 * Usage
+Full sample file is located project root, [[https://github.com/conao3/org-generate.el/blob/master/sample.org][sample.org]].
+
+** Define one file template
+In template org file, the first level is the template's foldering, the second level is the template's name.
+
+For example, name the first level as =hugo=, and the second level as =page= or =single=, and you can select a expand target to choice names =hugo/page= or =hugo/single=.
+
+We start at the third level with the definition of a file template.
+In this chapter, we will take the simplest example, the case of a single file extraction.
+
+#+begin_src org
+  ,* hugo
+  ,** page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+
+  # One file template example.
+  # To create file named as page in `org-generate-root`, do
+  #   M-x org-generate hugo/page
+  ,*** page.md
+  ,#+begin_src markdown
+    ---
+    title: "xxx"
+    date: xx/xx/xx
+    draft: true
+    ---
+
+    ### 1. First
+    xxxx
+
+    ### 2. Second
+    yyyy
+  ,#+end_src
+
+  ,** single
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :org-generate-variable: title date
+  :END:
+  ,*** {{title}}.md
+  ,#+begin_src markdown
+    ---
+    title: {{title}}
+    date: {{date}}
+    category: single
+    draft: true
+    ---
+
+    ### 1. First
+    xxxx
+
+    ### 2. Second
+    yyyy
+  ,#+end_src
+#+end_src
+
+In this example, two templates are defined, =hugo/page= and =hugo/single=.
+
+The template =hugo/page= is simply saved file as-is in =~/dev/repos/hugo-src/= named as =page.md=.
+
+In this way, you can specify where to extract the template by default via setting =org-generate-root= in properties.
+If you omit it, you can specify it when you unpack the template.
+
+The template named =hugo/single= uses the Mustache template. If you use a mustache template, You need to enumerate variables in the =org-generate-variable= section.
+
+The special consideration is that the file name is defined as ={{title.md}}= is.
+This means that this template can be controll not only the content to be extracted, but also the name of the file to be extracted to.
+
+** Define multi file template
+org-genrateのテンプレート定義は柔軟かつパワフルであり、一つのテンプレートを複数のファイルとフォルダで構成することができます。
+この機能は新しいプロジェクトを作成する際に便利です。
+
+The template definition of =org-genrate= is flexible and powerful, and it is possible to define multiple files and folders in a single template.
+This feature is useful when creating a new project.
+
+#+begin_src org
+  ,* project
+  ,** elisp
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/
+  :org-generate-variable: pkg-name description
+  :END:
+
+  # Multi file project template example.
+  # To create file in `org-generate-root`, do
+  #   M-x org-generate project/elisp
+
+  # You can use Mustache template in folder name, file contents.
+  # To use this feature, you should enumeration variable
+  # as `org-generate-variable` value.
+
+  # NOTE: If you want to create directory hierarchy,
+  #       Ensure heading name suffixed with '/'.
+
+  ,*** {{pkg-name}}.el/
+  ,**** .github/
+  ,***** workflows/
+  ,****** test.yml
+  ,#+begin_src yml
+  name: Main workflow
+  on: [push, pull_request]
+  ,#+end_src
+  ,**** .gitignore
+  ,#+begin_src gitignore
+  ## .gitignore
+
+  ,*-autoloads.el
+  ,*.elc
+  /.keg
+  ,#+end_src
+  ,**** Keg
+  ,#+begin_src keg
+    ;; Keg
+
+    (source gnu melpa)
+
+    (package
+     ({{pkg-name}}
+       (recipe . ({{pkg-name}} :fetcher github :repo "conao3/{{pkg-name}}.el"))))
+
+    (dev-dependency cort)
+  ,#+end_src
+  ,**** LICENSE
+  ,#+begin_src fundamental
+                        GNU GENERAL PUBLIC LICENSE
+                          Version 3, 29 June 2007
+  
+    Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+    Everyone is permitted to copy and distribute verbatim copies
+    of this license document, but changing it is not allowed.
+
+    ...
+
+  ,#+end_src
+  ,**** Makefile
+  ,#+begin_src makefile
+    ## Makefile
+
+    all:
+  ,#+end_src
+  ,**** README.org
+  ,#+begin_src org
+    ,,* Description
+    {{description}}.
+  ,#+end_src
+  ,**** {{pkg-name}}.el
+  ,#+begin_src elisp
+  ;;; {{pkg-name}}.el --- {{description}}  -*- lexical-binding: t; -*-
+
+  ;;; Code:
+
+  (defgroup {{pkg-name}} nil
+    "{{description}}."
+    :group 'convenience
+    :link '(url-link :tag "Github" "https://github.com/conao3/{{pkg-name}}.el"))
+
+  (provide '{{pkg-name}})
+  ;;; {{pkg-name}}.el ends here
+  ,#+end_src
+
+  ,**** {{pkg-name}}-test.el
+  ,#+begin_src elisp
+  ;;; {{pkg-name}}-tests.el --- Test definitions for {{pkg-name}}  -*- lexical-binding: t; -*-
+
+  ;;; Code:
+
+  (require 'cort)
+  (require '{{pkg-name}})
+
+  ;; (provide '{{pkg-name}}-tests)
+  ;;; {{pkg-name}}-tests.el ends here
+  ,#+end_src
+#+end_src
+
+This template is defined as =project/elisp=, and it creates below structure at once of the template expansion.
+
+- {{pkg-name}}.el/
+  - .github/
+    - workflows/
+      - test.yml
+  - .gitignore
+  - Keg
+  - LICENSE
+  - Makefile
+  - README.org
+  - {{pkg-name}}.el
+  - {{pkg-name}}-test.el
+
+Using this package, you can create a project in a generic way without having to language spesific tools. (For example =lein new=)
+
+** Generate files
+Run =M-x org-generate= once you have created a template with an org document. Then, select a template name and actually extract the template.
+When called interactively, it presents the folder where the template is extracted in a =dired=.
 
 * Customize
+- org-generate-file :: The org file is used as temprate definition.
+  (default ={{org-directory}}/org-generate.org=)
+
+  =M-x org-generate-edit= to edit template file.
 
 * Information
 ** Community
