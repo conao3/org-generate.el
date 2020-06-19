@@ -145,7 +145,7 @@ If ROOT is non-nil, omit some conditions."
       (when (not heading)
         (error "%s is not defined at %s" target org-generate-file))
       (let ((root (or org-generate-root
-                      (plist-get (car heading) :ORG-GENERATE-ROOT)
+                      (org-entry-get (plist-get :begin heading) "org-generate-root")
                       (read-file-name "Generate root: "))))
         (when (not (file-directory-p root))
           (error "%s is not directory" root))
