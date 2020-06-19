@@ -97,6 +97,12 @@
                 (tmp (funcall fn h2 tmp)))
       tmp)))
 
+;;;###autoload
+(defun org-generate-edit ()
+  "Open `org-generate-file'."
+  (interactive)
+  (find-file org-generate-file))
+
 (defun org-generate-1 (root heading)
   "Generate file from HEADING.
 If ROOT is non-nil, omit some conditions."
