@@ -102,9 +102,6 @@ The special consideration is that the file name is defined as ={{title.md}}= is.
 This means that this template can be controll not only the content to be extracted, but also the name of the file to be extracted to.
 
 ** Define multi file template
-org-genrateのテンプレート定義は柔軟かつパワフルであり、一つのテンプレートを複数のファイルとフォルダで構成することができます。
-この機能は新しいプロジェクトを作成する際に便利です。
-
 The template definition of =org-genrate= is flexible and powerful, and it is possible to define multiple files and folders in a single template.
 This feature is useful when creating a new project.
 
