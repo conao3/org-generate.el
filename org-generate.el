@@ -132,6 +132,7 @@ If ROOT is non-nil, omit some conditions."
                 (expand-file-name title* default-directory)))
           (org-generate-1 nil elm))))))
 
+;;;###autoload
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
   (interactive (list
