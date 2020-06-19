@@ -69,6 +69,14 @@
             (push (format "%s/%s" (car h1) (car h2)) res)))
         (nreverse res)))))
 
+(defun org-generate (target)
+  "Gerenate files from org document using TARGET definition."
+  (interactive (list
+                (completing-read
+                 "Generate: "
+                 (org-generate-candidate) nil 'match)))
+  target)
+
 (provide 'org-generate)
 
 ;; Local Variables:
