@@ -121,10 +121,12 @@ If ROOT is non-nil, omit some conditions."
                  (org-element-src-block-parser (point-max) nil))))
           (unless src
             (error "Node %s has no src block" title*))
-          (let* ((srcbody (org-remove-indentation (plist-get (cadr src) :value)))
+          (let* ((file (expand-file-name title* default-directory))
+                 (srcbody (org-remove-indentation (plist-get (cadr src) :value)))
                  (srcbody* (mustache-render srcbody org-generate-mustache-info)))
-            (with-temp-file (expand-file-name title* default-directory)
-              (insert srcbody*)))))
+            (with-temp-file file
+              (insert srcbody*))
+            (message (format "[org-generate] Saved: %s" file)))))
       (dolist (elm (cdr heading))
         (let ((default-directory
                 (expand-file-name title* default-directory)))
