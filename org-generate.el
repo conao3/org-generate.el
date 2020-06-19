@@ -44,6 +44,8 @@
   :group 'org-generate
   :type 'string)
 
+(defvar org-generate-root nil)
+(defvar org-generate-mustache-info nil)
 (defvar org-generate--file-buffer nil)
 (defun org-generate-file-buffer ()
   "Return org-generate file buffer."
@@ -102,15 +104,16 @@ If ROOT is non-nil, omit some conditions."
       (dolist (elm heading)
         (org-generate-1 nil elm))
     (when-let* ((heading* (car-safe heading))
-                (title (plist-get heading* :title)))
-      (when (and (not (string-suffix-p "/" title)) (cdr heading))
-        (error "Heading %s is not suffixed \"/\", but it have childlen" title))
-      ;; (if (string-suffix-p "/" title)
-      ;;     (mkdir title 'parent)
-      ;;   (with-temp-file title
-      ;;     (insert (format "%s/%s" tree title))))
-      (if (string-suffix-p "/" title)
-          (message (format "mkdir: %s" (expand-file-name title default-directory)))
+                (title (plist-get heading* :title))
+                (title* (mustache-render title org-generate-mustache-info)))
+      (when (and (not (string-suffix-p "/" title*)) (cdr heading))
+        (error "Heading %s is not suffixed \"/\", but it have childlen" title*))
+      ;; (if (string-suffix-p "/" title*)
+      ;;     (mkdir title* 'parent)
+      ;;   (with-temp-file title*
+      ;;     (insert (format "%s/%s" tree title*))))
+      (if (string-suffix-p "/" title*)
+          (message (format "mkdir: %s" (expand-file-name title* default-directory)))
         (let ((src
                (save-restriction
                  (narrow-to-region
@@ -121,19 +124,19 @@ If ROOT is non-nil, omit some conditions."
                      (goto-char (match-beginning 0))))
                  (org-element-src-block-parser (point-max) nil))))
           (unless src
-            (error "Node %s has no src block" title))
-          (let ((srcbody (plist-get (cadr src) :value)))
+            (error "Node %s has no src block" title*))
+          (let* ((srcbody (plist-get (cadr src) :value))
+                 (srcbody* (mustache-render srcbody org-generate-mustache-info)))
             (message (format "file: %s, %s"
-                            (expand-file-name title default-directory)
+                            (expand-file-name title* default-directory)
                             (progn
-                              (string-match ".*" srcbody)
-                              (match-string 0 srcbody)))))))
+                              (string-match ".*" srcbody*)
+                              (match-string 0 srcbody*)))))))
       (dolist (elm (cdr heading))
         (let ((default-directory
-                (expand-file-name title default-directory)))
+                (expand-file-name title* default-directory)))
           (org-generate-1 nil elm))))))
 
-(defvar org-generate-root nil)
 (defun org-generate (target)
   "Gerenate files from org document using TARGET definition."
   (interactive (list
@@ -144,12 +147,19 @@ If ROOT is non-nil, omit some conditions."
     (let ((heading (org-generate-search-heading target)))
       (when (not heading)
         (error "%s is not defined at %s" target org-generate-file))
-      (let ((root (or org-generate-root
-                      (org-entry-get (plist-get :begin heading) "org-generate-root")
-                      (read-file-name "Generate root: "))))
+      (let* ((beg (plist-get (car heading) :begin))
+             (root (or org-generate-root
+                       (org-entry-get beg "org-generate-root")
+                       (read-file-name "Generate root: ")))
+             (vars (org-entry-get-multivalued-property beg "org-generate-variable")))
         (when (not (file-directory-p root))
           (error "%s is not directory" root))
-        (let ((default-directory root))
+        (let ((default-directory root)
+              (org-generate-mustache-info
+               (ht<-alist
+                (mapcar (lambda (elm)
+                          (cons elm (read-string (format "%s: " elm))))
+                        vars))))
           (org-generate-1 t heading))))))
 
 (provide 'org-generate)
