@@ -110,7 +110,7 @@
 (defun org-generate-edit ()
   "Open `org-generate-file'."
   (interactive)
-  (find-file org-generate-file))
+  (pop-to-buffer (org-generate-file-buffer)))
 
 (defun org-generate-1 (root heading)
   "Generate file from HEADING.
@@ -158,11 +158,17 @@ If ROOT is non-nil, omit some conditions."
     (let ((heading (org-generate-search-heading target)))
       (unless heading
         (error "%s is not defined at %s" target org-generate-file))
-      (let* ((beg (plist-get (car heading) :begin))
-             (root (or org-generate-root
-                       (org-entry-get beg "org-generate-root")
+      (let* ((fn (lambda (elm)
+                  (org-entry-get-multivalued-property
+                   (plist-get (car heading) :begin)
+                   (symbol-name elm))))
+             (root (funcall fn 'org-generate-root))
+             (vars (funcall fn 'org-generate-vars))
+             (beforehooks (funcall fn 'org-generate-before-hook))
+             (afterhooks  (funcall fn 'org-generate-after-hook)))
+        (setq root (or org-generate-root
+                       (car root)
                        (read-file-name "Generate root: ")))
-             (vars (org-entry-get-multivalued-property beg "org-generate-variable")))
         (when (not (file-directory-p root))
           (error "%s is not directory" root))
         (let ((default-directory root)
@@ -172,9 +178,17 @@ If ROOT is non-nil, omit some conditions."
                     (mapcar (lambda (elm)
                               (cons elm (read-string (format "%s: " elm))))
                             vars)))))
-          (org-generate-1 t heading))
-        (when (called-interactively-p 'interactive)
-          (dired root))))))
+          (when beforehooks
+            (dolist (elm beforehooks)
+              (funcall elm)))
+
+          (org-generate-1 t heading)
+
+          (when afterhooks
+            (dolist (elm afterhooks)
+              (funcall elm)))
+          (when (called-interactively-p 'interactive)
+            (dired root)))))))
 
 (provide 'org-generate)
 
