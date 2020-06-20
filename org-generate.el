@@ -54,7 +54,7 @@
 
 (defun org-generate--hash-table-from-alist (alist)
   "Create hash table from ALIST."
-  (let ((h (make-hash-table)))
+  (let ((h (make-hash-table :test 'equal)))
     ;; the first key-value pair in an alist gets precedence, so we
     ;; start from the end of the list:
     (dolist (pair (reverse alist) h)
@@ -163,7 +163,7 @@ If ROOT is non-nil, omit some conditions."
                    (plist-get (car heading) :begin)
                    (symbol-name elm))))
              (root (funcall fn 'org-generate-root))
-             (vars (funcall fn 'org-generate-vars))
+             (vars (funcall fn 'org-generate-variable))
              (beforehooks (funcall fn 'org-generate-before-hook))
              (afterhooks  (funcall fn 'org-generate-after-hook)))
         (setq root (or org-generate-root
