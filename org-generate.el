@@ -156,7 +156,7 @@ If ROOT is non-nil, omit some conditions."
                  (org-generate-candidate) nil 'match)))
   (with-current-buffer (org-generate-file-buffer)
     (let ((heading (org-generate-search-heading target)))
-      (when (not heading)
+      (unless heading
         (error "%s is not defined at %s" target org-generate-file))
       (let* ((beg (plist-get (car heading) :begin))
              (root (or org-generate-root
