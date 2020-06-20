@@ -5,7 +5,7 @@
 ;; Author: Naoya Yamashita <conao3@gmail.com>
 ;; Version: 0.0.1
 ;; Keywords: convenience
-;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23") (ht "2.2"))
+;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,6 @@
 (require 'org)
 (require 'org-element)
 (require 'mustache)
-(require 'ht)                           ; for mustache utility
 
 (defgroup org-generate nil
   "Generate template files/folders from org document."
@@ -52,6 +51,16 @@
   (or org-generate--file-buffer
       (setq org-generate--file-buffer
             (find-file-noselect org-generate-file))))
+
+(defun org-generate--hash-table-from-alist (alist)
+  "Create hash table from ALIST."
+  (let ((h (make-hash-table)))
+    ;; the first key-value pair in an alist gets precedence, so we
+    ;; start from the end of the list:
+    (dolist (pair (reverse alist) h)
+      (let ((key (car pair))
+            (value (cdr pair)))
+        (puthash key value h)))))
 
 (defun org-generate-get-heading ()
   "Get `org' heading."
@@ -159,7 +168,7 @@ If ROOT is non-nil, omit some conditions."
         (let ((default-directory root)
               (org-generate-mustache-info
                (or org-generate-mustache-info
-                   (ht<-alist
+                   (org-generate--hash-table-from-alist
                     (mapcar (lambda (elm)
                               (cons elm (read-string (format "%s: " elm))))
                             vars)))))
