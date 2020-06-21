@@ -169,7 +169,7 @@ If ROOT is non-nil, omit some conditions."
         (setq root (or org-generate-root
                        (car root)
                        (read-file-name "Generate root: ")))
-        (when (not (file-directory-p root))
+        (unless (file-directory-p root)
           (error "%s is not directory" root))
         (let ((default-directory root)
               (org-generate-mustache-info
