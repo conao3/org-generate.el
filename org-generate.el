@@ -180,13 +180,13 @@ If ROOT is non-nil, omit some conditions."
                             vars)))))
           (when beforehooks
             (dolist (elm beforehooks)
-              (funcall elm)))
+              (funcall (intern elm))))
 
           (org-generate-1 t heading)
 
           (when afterhooks
             (dolist (elm afterhooks)
-              (funcall elm)))
+              (funcall (intern elm))))
           (when (called-interactively-p 'interactive)
             (dired root)))))))
 
