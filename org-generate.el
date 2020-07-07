@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020  Naoya Yamashita
 
 ;; Author: Naoya Yamashita <conao3@gmail.com>
-;; Version: 1.0.2
+;; Version: 1.0.3
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
@@ -53,7 +53,8 @@
 (defvar org-generate--file-buffer nil)
 (defun org-generate-file-buffer ()
   "Return org-generate file buffer."
-  (or org-generate--file-buffer
+  (or (and (buffer-live-p org-generate--file-buffer)
+           org-generate--file-buffer)
       (setq org-generate--file-buffer
             (find-file-noselect org-generate-file))))
 
