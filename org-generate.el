@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020  Naoya Yamashita
 
 ;; Author: Naoya Yamashita <conao3@gmail.com>
-;; Version: 0.0.1
+;; Version: 1.0.1
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
@@ -42,6 +42,11 @@
   "File template definition path."
   :group 'org-generate
   :type 'string)
+
+(defcustom org-generate-edit-recursive-edit nil
+  "If non-nil, use `recursive-edit' for `org-generate-edit'."
+  :group 'org-generate
+  :type 'boolean)
 
 (defvar org-generate-root nil)
 (defvar org-generate-mustache-info nil)
@@ -110,7 +115,12 @@
 (defun org-generate-edit ()
   "Open `org-generate-file'."
   (interactive)
-  (pop-to-buffer (org-generate-file-buffer)))
+  (if org-generate-edit-recursive-edit
+      (save-window-excursion
+        (save-excursion
+          (pop-to-buffer-same-window (org-generate-file-buffer))
+          (recursive-edit)))
+    (pop-to-buffer-same-window (org-generate-file-buffer))))
 
 (defun org-generate-1 (root heading)
   "Generate file from HEADING.
