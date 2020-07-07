@@ -53,7 +53,8 @@
 (defvar org-generate--file-buffer nil)
 (defun org-generate-file-buffer ()
   "Return org-generate file buffer."
-  (or org-generate--file-buffer
+  (or (and (buffer-live-p org-generate--file-buffer)
+           org-generate--file-buffer)
       (setq org-generate--file-buffer
             (find-file-noselect org-generate-file))))
 
