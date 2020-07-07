@@ -164,41 +164,42 @@ If ROOT is non-nil, omit some conditions."
                 (completing-read
                  "Generate: "
                  (org-generate-candidate) nil 'match)))
-  (with-current-buffer (org-generate-file-buffer)
-    (let ((heading (org-generate-search-heading target)))
-      (unless heading
-        (error "%s is not defined at %s" target org-generate-file))
-      (let* ((fn (lambda (elm)
-                  (org-entry-get-multivalued-property
-                   (plist-get (car heading) :begin)
-                   (symbol-name elm))))
-             (root (funcall fn 'org-generate-root))
-             (vars (funcall fn 'org-generate-variable))
-             (beforehooks (funcall fn 'org-generate-before-hook))
-             (afterhooks  (funcall fn 'org-generate-after-hook)))
-        (setq root (or org-generate-root
-                       (car root)
-                       (read-file-name "Generate root: ")))
-        (unless (file-directory-p root)
-          (error "%s is not directory" root))
-        (let ((default-directory root)
-              (org-generate-mustache-info
-               (or org-generate-mustache-info
-                   (org-generate--hash-table-from-alist
-                    (mapcar (lambda (elm)
-                              (cons elm (read-string (format "%s: " elm))))
-                            vars)))))
-          (when beforehooks
-            (dolist (elm beforehooks)
-              (funcall (intern elm))))
+  (let ((dir default-directory))
+    (with-current-buffer (org-generate-file-buffer)
+      (let ((heading (org-generate-search-heading target)))
+        (unless heading
+          (error "%s is not defined at %s" target org-generate-file))
+        (let* ((fn (lambda (elm)
+                     (org-entry-get-multivalued-property
+                      (plist-get (car heading) :begin)
+                      (symbol-name elm))))
+               (root (funcall fn 'org-generate-root))
+               (vars (funcall fn 'org-generate-variable))
+               (beforehooks (funcall fn 'org-generate-before-hook))
+               (afterhooks  (funcall fn 'org-generate-after-hook)))
+          (setq root (or org-generate-root
+                         (car root)
+                         (read-file-name "Generate root: " dir)))
+          (unless (file-directory-p root)
+            (error "%s is not directory" root))
+          (let ((default-directory root)
+                (org-generate-mustache-info
+                 (or org-generate-mustache-info
+                     (org-generate--hash-table-from-alist
+                      (mapcar (lambda (elm)
+                                (cons elm (read-string (format "%s: " elm))))
+                              vars)))))
+            (when beforehooks
+              (dolist (elm beforehooks)
+                (funcall (intern elm))))
 
-          (org-generate-1 t heading)
+            (org-generate-1 t heading)
 
-          (when afterhooks
-            (dolist (elm afterhooks)
-              (funcall (intern elm))))
-          (when (called-interactively-p 'interactive)
-            (dired root)))))))
+            (when afterhooks
+              (dolist (elm afterhooks)
+                (funcall (intern elm))))
+            (when (called-interactively-p 'interactive)
+              (dired root))))))))
 
 (provide 'org-generate)
 
