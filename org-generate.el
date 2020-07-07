@@ -43,6 +43,11 @@
   :group 'org-generate
   :type 'string)
 
+(defcustom org-generate-edit-recursive-edit nil
+  "If non-nil, use `recursive-edit' for `org-generate-edit'."
+  :group 'org-generate
+  :type 'boolean)
+
 (defvar org-generate-root nil)
 (defvar org-generate-mustache-info nil)
 (defvar org-generate--file-buffer nil)
@@ -110,7 +115,12 @@
 (defun org-generate-edit ()
   "Open `org-generate-file'."
   (interactive)
-  (pop-to-buffer (org-generate-file-buffer)))
+  (if org-generate-edit-recursive-edit
+      (save-window-excursion
+        (save-excursion
+          (pop-to-buffer-same-window (org-generate-file-buffer))
+          (recursive-edit)))
+    (pop-to-buffer-same-window (org-generate-file-buffer))))
 
 (defun org-generate-1 (root heading)
   "Generate file from HEADING.
