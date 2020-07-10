@@ -1,0 +1,454 @@
+* Examples for ~org-generate-with-export~
+
+This file contains examples of additional org features available when using
+~org-generate-with-export~. This is by no means complete, there are endless
+possibilities.
+
+Some useful features are (links to the org-mode manual):
+
+- [[https://orgmode.org/manual/Include-Files.html][Include Files]]
+- [[https://orgmode.org/manual/Macro-Replacement.html][Macro Replacement]]
+- [[https://orgmode.org/manual/Noweb-Reference-Syntax.html][Noweb Reference Syntax]]
+- [[https://orgmode.org/manual/Exporting-Code-Blocks.html][Exporting Code Blocks]]
+
+~org-generate-with-export~ exports the target, its parent heading including the
+content before the first child, and the content before the first heading. This
+is important so you know which macros and source blocks are available. In
+addition ~org-generate-with-export~ adds ~#+OPTIONS: prop:t~ to make properties
+get exported.
+
+Use ~M-x org-org-export-as-org~ while inside the org-caputre template buffer to
+see what results you will get before running the function.
+
+Most source block examples to generate results use emacs-lisp. You can use any
+language supported by babel.
+
+** Table of Contents
+
+- [[#use-a-macro-to-set-heading-title][Use a macro to set heading title]]
+- [[#get-user-input-to-set-the-heading-title][Get user input to set the heading title]]
+- [[#get-user-input---avoid-multiple-evaluations][Get user input - avoid multiple evaluations]]
+- [[#set-the-org-generate-root-property-with-a-macro][Set the :org-generate-root: property with a macro]]
+- [[#use-a-property-value-to-set-org-generate-root-with-a-macro][Use a property value to set :org-generate-root: with a macro]]
+- [[#use-variables-from-a-emacs-lisp-list][Use variables from a emacs lisp list]]
+- [[#include-a-file][Include a file]]
+- [[#include-a-file-with-filename-from-argument][Include a file with filename from argument]]
+- [[#split-the-template-into-multiple-files-with-include][Split the template into multiple files with include]]
+- [[#noweb-reference-syntax---include-results-in-source-block][Noweb reference syntax - include results in source block]]
+- [[#exported-source-blocks][Exported source blocks]]
+- [[#inline-source-block][Inline source block]]
+- [[#create-root-directory-if-it-doesnt-exist][Create root directory if it doesn't exist]]
+- [[#use-a-source-block-to-copy-file-below-root][Use a source block to copy file below root]]
+- [[#expand-a-macro-with-elisp][Expand a macro with elisp]]
+- [[#do-something-after-org-generate][Do something after org-generate]]
+
+** Use a macro to set heading title
+
+Set the title of the heading with a macro:
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,* hugo
+  ,#+MACRO: filename page.md
+  ,** page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+  ,*** {{{filename}}}
+#+END_SRC
+
+The macro is replaced with:
+
+#+BEGIN_SRC org
+  ,*** page.md
+#+END_SRC
+
+** Get user input to set the heading title
+
+Set the title of the heading with a macro. To evaluate emacs lisp inside a macro
+use ~eval~:
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,* hugo
+   ,#+MACRO: get-directory (eval (format "%s/" (read-string "Directory: ")))
+  ,** page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+  ,*** {{{get-directory}}}
+#+END_SRC
+
+You will be prompted for a directory. If you input ~test~ the macro is replaced
+with:
+
+#+BEGIN_SRC org
+  ,*** test/
+#+END_SRC
+
+** Get user input - avoid multiple evaluations
+
+Each time a macro is expanded any emacs-lisp in it is reevaluated. If you reuse
+a macro that ask you for an input you probably don't want it to ask you over and
+over. To get around use a local variable:
+
+#+BEGIN_SRC org
+  ,#+NAME: licence
+  ,#+BEGIN_SRC emacs-lisp :exports none :results raw :wrap src text
+    (unless (and (boundp 'my-var-licence) my-var-licence)
+      (setq-local my-var-licence (completing-read "Licence: " '("mit" "gplv3") nil t)))
+    (org-export-string-as (concat  "#+INCLUDE: \"~/projects/licences/" my-var-licence ".txt\"") 'org t)
+  ,#+END_SRC
+
+  ,#+CALL: licence()
+  ,#+CALL: licence()
+#+END_SRC
+
+Could use a macro as well with ~org-sbe~:
+
+#+BEGIN_SRC org
+  ,#+MACRO: licence (eval (org-sbe "licence"))
+  {{{licence}}}
+  {{{licence}}}
+#+END_SRC
+
+
+** Set the :org-generate-root: property with a macro
+
+To make this work you have to use a macro that sets the whole line.
+
+~org-sbe~ is used to get the result from the source block named ~hugo-root~
+inside the macro. That function is great to combine macros and source blocks.
+
+The macro uses an argument that can be used when calling the macro and inside
+the macro as ~$1~.
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,* hugo
+  ,#+NAME: hugo-root
+  ,#+MACRO: hugo-root (eval (concat ":org-generate-root: " (org-sbe "hugo-root") $1))
+  : ~/dev/repos/hugo-src/
+  ,** page
+  :PROPERTIES:
+  {{{hugo-root(content/blog/)}}}
+  :END:
+#+END_SRC
+
+The macro line expands to:
+
+#+BEGIN_SRC org
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+#+END_SRC
+
+** Use a property value to set :org-generate-root: with a macro
+
+Uses the value of the inherited property ~root~:
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,#+MACRO: hugo-root-path (eval (concat ":org-generate-root: " (org-entry-get-with-inheritance "root") $1))
+
+  ,* hugo
+  :PROPERTIES:
+  :root:     ~/dev/repos/hugo-src/
+  :END:
+
+  ,** page
+  :PROPERTIES:
+  {{{hugo-root-path(content/blog/)}}}
+  :END:
+#+END_SRC
+
+The macro will be replaced with:
+
+#+BEGIN_SRC org
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+#+END_SRC
+
+This could also be separated into a source block and macro:
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,* hugo
+  :PROPERTIES:
+  :root:     ~/dev/repos/hugo-src/
+  :END:
+
+  ,#+NAME: root
+  ,#+BEGIN_SRC emacs-lisp :exports none :results raw :var path=""
+    (concat ":org-generate-root: " (org-entry-get-with-inheritance "root") (format "%s" path))
+  ,#+END_SRC
+  ,#+MACRO: hugo-root-path (eval (org-sbe "root" (path $$1)))
+
+  ,** page
+  :PROPERTIES:
+  {{{hugo-root-path(content/blog/)}}}
+  :END:
+#+END_SRC
+
+When using a string for a variable with ~org-sbe~ it has to be prefixed with
+another ~$~. Here ~$$1~ or if a string like =$"string"=.
+
+** Use variables from a emacs lisp list
+
+Store variables with emacs lisp and a source block and access them with ~org-sbe~:
+
+#+BEGIN_SRC org
+  ,#+NAME: variables
+  ,#+BEGIN_SRC emacs-lisp
+    '(:folder "~/.emacs.d"
+      :license "mit")
+  ,#+END_SRC
+
+  ,#+NAME: get-var
+  ,#+BEGIN_SRC emacs-lisp :var vars=variables var=""
+    (plist-get vars (intern-soft var))
+  ,#+END_SRC
+
+  ,#+MACRO: emacs-test (eval (org-sbe "get-var" (var $$1)))
+  {{{emacs-test(:folder)}}}
+#+END_SRC
+
+The macro is expanded into:
+
+#+BEGIN_SRC org
+  ~/.emacs.d
+#+END_SRC
+
+** Include a file
+
+Include another file at any place in your template. Make sure it is wrapped in a
+block if needed.
+
+#+BEGIN_SRC org
+  ,#+INCLUDE: "~/projects/licences/gplv3.txt" src text
+  ,#+INCLUDE: "~/.emacs.d/init.el" src emacs-lisp
+  ,#+INCLUDE: "./paper.org::#theory" :only-contents t
+#+END_SRC
+
+Macros in an included file get replaced as well. An include in an included org
+file works as well.
+
+** Include a file with filename from argument
+
+Found two solutions for this, with org and exporting one just needs to get
+a bit creative sometimes.
+
+First one uses ~org-export-string-as~. This function could actually be used for
+a lot of other stuff as well.
+
+#+BEGIN_SRC org
+  ,#+MACRO: include-file (eval (org-export-string-as (concat "#+INCLUDE: \"~/projects/licences/" $1 ".txt\" src text") 'org t))
+  {{{include-file(gplv3)}}}
+#+END_SRC
+
+The second solution expands the macro to insert the ~#+INCLUDE: ...~ and uses a
+macro to trigger the expansion. This is needed as the macros are replaced after
+inclusion and therefore the file would never be included.
+
+#+BEGIN_SRC org
+  ,#+MACRO: include #+INCLUDE: "~/projects/licences/$1.txt" src text
+  ,#+MACRO: include-expand (eval (progn (org-export-expand-include-keyword) ""))
+  {{{include(gplv3)}}}
+  {{{include-expand}}}
+#+END_SRC
+
+** Split the template into multiple files with include
+
+Include files to split the template into multiple files. This example includes
+the contents from the heading ~page~ found in ~hugo.org~ inside the directory
+where ~org-generate.org~ is placed:
+
+#+BEGIN_SRC org
+  ,#+OPTIONS: prop:t
+  ,* hugo
+  ,** page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+  ,#+INCLUDE: hugo.org::*page :only-contents t
+#+END_SRC
+
+The file ~hugo.org~ has the following content:
+
+#+BEGIN_SRC org
+  ,* page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+  ,** text.txt
+  ,#+BEGIN_SRC text
+    Some text
+  ,#+END_SRC
+#+END_SRC
+
+This is exported as:
+
+#+BEGIN_SRC org
+  ,* hugo
+  ,** page
+  :PROPERTIES:
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
+  :END:
+  ,*** text.txt
+  ,#+begin_src text
+    Some text
+  ,#+end_src
+#+END_SRC
+
+** Noweb reference syntax - include results in source block
+
+Include the code or the result of other source blocks with noweb. Check the the
+Noweb Reference Syntax in the [[https://orgmode.org/manual/Noweb-Reference-Syntax.html][org manual]].
+
+An example with a simple named block and a shell source block:
+
+#+BEGIN_SRC org
+  ,#+NAME: year
+  : 2020
+
+  ,#+NAME: whoami
+  ,#+BEGIN_SRC sh
+    whoami
+  ,#+END_SRC
+
+  ,#+BEGIN_SRC emacs-lisp :noweb yes
+    ;; by <<whoami()>> in <<year()>>
+  ,#+END_SRC
+#+END_SRC
+
+The emacs source block will be exported to:
+
+#+BEGIN_SRC org
+  ,#+begin_src emacs-lisp
+    ;; by hubisan in 2020
+  ,#+end_src
+#+END_SRC
+
+** Exported source blocks
+
+In the header arguments of the source code you can define what will be exported
+(~:exports code~, ~:exports result~, ~:exports both~, ~:exports none~).
+
+This can for instance be used to insert the results of a source block. In this
+case to include a file with emacs-lisp.
+
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC emacs-lisp :exports results :results raw :wrap src text
+    (org-export-string-as "#+INCLUDE: \"~/projects/licences/gplv3.txt\"" 'org t)
+  ,#+END_SRC
+#+END_SRC
+
+ The result gets wrapped  in a source block (~:wrap src text~) and the code is not
+ exported because of the header arguments ~:exports: results~.
+
+** Inline source block
+
+You can use an inline source block. Only downside is that you can't get rid of
+the spaces around it as far as I know.
+
+#+BEGIN_SRC org
+  This is some src_elisp[:results raw]{(concat "inline" "-" "code")}.
+#+END_SRC
+
+After exporting this looks as follows:
+
+#+BEGIN_SRC org
+  This is some inline-code.
+#+END_SRC
+
+** Create root directory if it doesn't exist
+
+This creates the root directory if it doesn't exist, and if necessary the parent
+directories.
+
+#+BEGIN_SRC org
+  ,* Example
+
+  ,#+NAME: create-root
+  ,#+BEGIN_SRC emacs-lisp :exports none :results silent :var source="" dest=""
+    (let* ((copy-root (org-entry-get-with-inheritance "org-generate-root"))
+           (unless (file-exists-p copy-dir)
+             (make-directory copy-dir t))
+  ,#+END_SRC
+
+  ,** Project
+  :PROPERTIES:
+  :org-generate-root: ~/org-generate-test/
+  :END:
+
+  ,#+CALL: create-root()
+
+  ,*** text.txt
+  ,#+BEGIN_SRC text
+    Some text.
+  ,#+END_SRC
+#+END_SRC
+
+** Use a source block to copy file below root
+
+Copy in this case an image to the root. The directory is created if it doesn't
+exist.
+
+#+BEGIN_SRC org
+  ,* Example
+
+  ,#+NAME: copy-image
+  ,#+BEGIN_SRC emacs-lisp :exports none :results silent :var source="" dest=""
+    (let* ((copy-root (org-entry-get-with-inheritance "org-generate-root"))
+           (copy-fname (expand-file-name (concat copy-root dest)))
+           (copy-dir (file-name-directory copy-fname)))
+      ;; Create the directory if it doesn't exist.
+      (unless (file-exists-p copy-dir)
+        (make-directory copy-dir t))
+      (copy-file source copy-fname t))
+  ,#+END_SRC
+
+  ,** Project
+  :PROPERTIES:
+  :org-generate-root: ~/org-generate-test/
+  :END:
+
+  ,#+CALL: copy-image(source="~/image.png", dest="img/image.png")
+
+  ,*** text.txt
+  ,#+BEGIN_SRC text
+  Some text.
+  ,#+END_SRC
+#+END_SRC
+
+** Expand a macro with elisp
+
+To expand a macro with elisp you can call ~org-macro-expand~ as follows:
+
+#+BEGIN_SRC emacs-lisp
+  (org-macro-expand '(macro (:key "author" :args nil)) org-macro-templates)
+  (org-macro-expand '(macro (:key "property" :args ("prop"))) org-macro-templates)
+#+END_SRC
+
+This could be useful for ~org-sbe~ or to use the macro with the noweb reference
+syntax in a source block.
+
+** Do something after org-generate
+
+Use an advice to do something after generating:
+
+#+BEGIN_SRC org
+  ,* Project
+  ,#+NAME: after-org-generate
+  ,#+BEGIN_SRC emacs-lisp :exports none :results silent
+    (advice-add 'org-generate
+                :after
+                (lambda (&rest r)
+                  (message "%s" "this is called after")
+                  (advice-remove 'org-generate "my-org-generate-advice"))
+                '((name . "my-org-generate-advice")))
+  ,#+END_SRC
+
+  ,** test
+  :PROPERTIES:
+  :org-generate-root: ~/example/
+  :END:
+  ,#+CALL: after-org-generate()
+#+END_SRC

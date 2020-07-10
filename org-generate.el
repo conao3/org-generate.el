@@ -202,6 +202,58 @@ If ROOT is non-nil, omit some conditions."
             (when (called-interactively-p 'interactive)
               (dired root))))))))
 
+;;;###autoload
+(defun org-generate-with-export (target)
+  "Export as org and generate files from org document using TARGET definition.
+By exporting as org before generating it is possible to use some additional org
+features like including files, macros replacements and the noweb reference
+syntax."
+  (interactive (list
+                (completing-read
+                 "Generate: "
+                 (org-generate-candidate) nil 'match)))
+  (let (string-to-export)
+    (with-current-buffer (org-generate-file-buffer)
+      (let ((heading (org-generate-search-heading target)))
+        (unless heading
+          (user-error "%s is not defined at %s" target org-generate-file))
+        ;; Export only the target's subtree, it's parent content and everything
+        ;; before the first heading to avoid macro replacements in parts that
+        ;; are not relevant.
+        (let* ((start (plist-get (car heading) :begin))
+               regions)
+          (save-excursion
+            (save-match-data
+              ;; Add the target subtree.
+              (push (cons start (plist-get (car heading) :end)) regions)
+              ;; Add the body of the target's parent.
+              (goto-char start)
+              (org-up-heading-safe)
+              (push (cons (point) (outline-next-heading)) regions)
+              ;; Add the region before the first heading if there is any.
+              (goto-char (point-min))
+              (unless (org-at-heading-p)
+                (push (cons (point-min) (outline-next-heading)) regions))))
+          ;; Create the string for export.
+          (setq string-to-export
+                (apply #'concat "#+OPTIONS: prop:t\n"
+                       (mapcar (lambda (e)
+                                 (buffer-substring-no-properties (car e) (cdr e)))
+                               regions))))))
+    ;; Export the string as org and insert it into a temp buffer. Set
+    ;; `org-generate--file-buffer' to the temp buffer when calling
+    ;; `org-generate'.
+    (require 'ox-org)
+    (with-temp-buffer
+      (let ((org-generate--file-buffer (current-buffer))
+            (exported-string (org-export-string-as string-to-export 'org)))
+        (insert exported-string)
+        (let ((org-inhibit-startup t)
+              (org-mode)))
+        (if (called-interactively-p 'interactive)
+            (funcall-interactively #'org-generate target)
+          (org-generate target))))))
+
 (provide 'org-generate)
 
 ;; Local Variables:

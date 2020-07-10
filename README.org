@@ -224,6 +224,12 @@ Using this package, you can create a project in a generic way without having to 
 Run =M-x org-generate= once you have created a template with an org document. Then, select a template name and actually extract the template.
 When called interactively, it presents the folder where the template is extracted in a =dired=.
 
+Furthermore you can run =M-x org-generate-with-export= which exports the
+template as org before calling =org-generate=. This makes it possible to use
+additional org features inside your template like macro replacements, including
+files or the noweb reference syntax. Some examples are shown in
+[[with-export-examples.org]].
+
 * Customize
 - org-generate-file :: The org file is used as temprate definition.
   (default ={{user-emacs-directory}}/org-generate.org=)
