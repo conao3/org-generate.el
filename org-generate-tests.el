@@ -127,6 +127,33 @@ xxxx
 yyyy
 ")))
 
+(cort-deftest--org-generate org-genearte/heading-with-macro
+  '(((with-cort--org-generate-buffer "\
+#+OPTIONS: prop:t
+* hugo
+#+MACRO: filename page.md
+** page
+*** {{{filename}}}
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (org-generate-with-export "hugo/page")
+       (cort--file-contents "page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
 ;; (provide 'org-generate-tests)
 
 ;; Local Variables:
