@@ -65,6 +65,8 @@ TESTLST is list of (GIVEN EXPECT)."
 
 ;;; Test definition
 
+(setq org-generate-show-save-message nil)
+
 (cort-deftest org-generate/simple
   (cort-generate :equal
     '(((+ 2 3) 5))))
