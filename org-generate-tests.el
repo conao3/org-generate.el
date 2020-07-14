@@ -149,7 +149,7 @@ yyyy
   xxxx
 #+end_src
 "
-       (org-generate-with-export "hugo/page")
+       (org-generate "hugo/page")
        (cort--file-contents "page.md"))
      "\
 ---
@@ -179,7 +179,7 @@ xxxx
 "
        (with-simulated-input
            "awesome RET"
-         (org-generate-with-export "hugo/page"))
+         (org-generate "hugo/page"))
        (cort--file-contents "awesome/page.md"))
      "\
 ---
@@ -213,7 +213,7 @@ xxxx
        (let ((org-generate-root nil))
          (with-simulated-input
              (format "%s RET" cort--dir)
-           (org-generate-with-export "hugo/page")))
+           (org-generate "hugo/page")))
        (cort--file-contents "content/blog/page.md"))
      "\
 ---
@@ -248,7 +248,7 @@ xxxx
 " cort--dir)
        (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
        (let ((org-generate-root nil))
-         (org-generate-with-export "hugo/page"))
+         (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))
      "\
 ---
@@ -279,7 +279,7 @@ xxxx
 " cort--dir)
        (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
        (let ((org-generate-root nil))
-         (org-generate-with-export "hugo/page"))
+         (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))
      "\
 ---
