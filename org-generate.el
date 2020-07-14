@@ -187,6 +187,8 @@ If ROOT is non-nil, omit some conditions."
                 (title* (mustache-render title org-generate-mustache-info)))
       (when (and (not (string-suffix-p "/" title*)) (cdr heading))
         (error "Heading %s is not suffixed \"/\", but it have childlen" title*))
+      (when (string-empty-p title*)
+        (error "Heading %s will be empty string.  We could not create file with empty name" title))
       (if (string-suffix-p "/" title*)
           (mkdir (expand-file-name title* default-directory) 'parent)
         (let ((src
