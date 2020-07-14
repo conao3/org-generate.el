@@ -1,8 +1,8 @@
 * Examples for ~org-generate-with-export~
 
 This file contains examples of additional org features available when using
-~org-generate-with-export~. This is by no means complete, there are endless
-possibilities.
+~org-generate-with-export-as-org~ is set to ~t~. This is by no means complete,
+there are endless possibilities.
 
 Some useful features are (links to the org-mode manual):
 
@@ -11,17 +11,13 @@ Some useful features are (links to the org-mode manual):
 - [[https://orgmode.org/manual/Noweb-Reference-Syntax.html][Noweb Reference Syntax]]
 - [[https://orgmode.org/manual/Exporting-Code-Blocks.html][Exporting Code Blocks]]
 
-~org-generate-with-export~ exports the target, its parent heading including the
-content before the first child, and the content before the first heading. This
-is important so you know which macros and source blocks are available. In
-addition ~org-generate-with-export~ adds ~#+OPTIONS: prop:t~ to make properties
-get exported.
+If enabled it exports target's heading and its subtree, its parent heading
+including the content before the first child , and the content before the first
+heading. This is important so you know which macros and source blocks are
+available.
 
-Use ~M-x org-org-export-as-org~ while inside the org-caputre template buffer to
+Use ~M-x org-org-export-as-org~ while inside the org-capture template buffer to
 see what results you will get before running the function.
-
-Most source block examples to generate results use emacs-lisp. You can use any
-language supported by babel.
 
 ** Table of Contents
 
@@ -432,23 +428,23 @@ syntax in a source block.
 
 ** Do something after org-generate
 
-Use an advice to do something after generating:
+~org-generate~ supports a property to set functions to call before or after.
+This examples uses a source block to define the function that will be called
+after. Like this you can have everything in the template and you don't have to
+define the function somewhere else.
 
 #+BEGIN_SRC org
   ,* Project
-  ,#+NAME: after-org-generate
-  ,#+BEGIN_SRC emacs-lisp :exports none :results silent
-    (advice-add 'org-generate
-                :after
-                (lambda (&rest r)
-                  (message "%s" "this is called after")
-                  (advice-remove 'org-generate "my-org-generate-advice"))
-                '((name . "my-org-generate-advice")))
-  ,#+END_SRC
-
   ,** test
   :PROPERTIES:
   :org-generate-root: ~/example/
+  :org-generate-after-hook: my-called-after
   :END:
+
+  ,#+NAME: after-org-generate
+  ,#+BEGIN_SRC emacs-lisp :exports none :results silent
+    (defun my-called-after ()
+      (message "called after"))
+  ,#+END_SRC
   ,#+CALL: after-org-generate()
 #+END_SRC
