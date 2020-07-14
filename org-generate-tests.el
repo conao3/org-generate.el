@@ -34,9 +34,9 @@
        temporary-file-directory))
 
 (defun cort--file-contents (path)
-  "Get all contents of file located at PATH."
+  "Get all contents of file located at PATH from `cort--dir'."
   (with-temp-buffer
-    (insert-file-contents path)
+    (insert-file-contents (expand-file-name path cort--dir))
     (buffer-string)))
 
 (defmacro with-cort--org-generate-buffer (contents &rest body)
@@ -105,8 +105,7 @@
 #+end_src
 "
          (org-generate "hugo/page")
-         (cort--file-contents
-          (expand-file-name "page" cort--dir)))
+         (cort--file-contents "page"))
        "\
 ---
 title: \"xxx\"
