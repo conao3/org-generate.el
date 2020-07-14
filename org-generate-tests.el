@@ -26,6 +26,7 @@
 ;;; Code:
 
 (require 'cort)
+(require 'with-simulated-input)
 (require 'org-generate)
 
 (setq cort--dir
@@ -135,8 +136,8 @@ yyyy
 (cort-deftest--org-generate org-genearte/heading-with-macro
   '(((with-cort--org-generate-buffer "\
 #+OPTIONS: prop:t
-* hugo
 #+MACRO: filename page.md
+* hugo
 ** page
 *** {{{filename}}}
 #+begin_src markdown
@@ -150,6 +151,136 @@ yyyy
 "
        (org-generate-with-export "hugo/page")
        (cort--file-contents "page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-genearte/heading-with-macro-using-user-input
+  '(((with-cort--org-generate-buffer "\
+#+OPTIONS: prop:t
+#+MACRO: get-directory (eval (format \"%s/\" (read-string \"Filename: \")))
+* hugo
+** page
+*** {{{get-directory}}}
+**** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (with-simulated-input
+           "awesome RET"
+         (org-generate-with-export "hugo/page"))
+       (cort--file-contents "awesome/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-genearte/set-variable-with-macro
+  '(((with-cort--org-generate-buffer "\
+#+OPTIONS: prop:t
+#+NAME: hugo-root
+#+MACRO: hugo-root (eval (concat \":org-generate-root: \" (org-sbe \"hugo-root\") $1))
+* hugo
+** page
+:PROPERTIES:
+{{{hugo-root(content/blog/)}}}
+:END:
+*** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (let ((org-generate-root nil))
+         (with-simulated-input
+             (format "%s RET" cort--dir)
+           (org-generate-with-export "hugo/page")))
+       (cort--file-contents "content/blog/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-genearte/set-variable-using-property
+  '(((with-cort--org-generate-buffer (format "\
+#+OPTIONS: prop:t
+#+MACRO: hugo-root-path (eval (concat \":org-generate-root: \" (org-entry-get-with-inheritance \"root\") $1))
+* hugo
+:PROPERTIES:
+:root: %s/
+:END:
+** page
+:PROPERTIES:
+{{{hugo-root-path(content/blog/)}}}
+:END:
+*** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+" cort--dir)
+       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
+       (let ((org-generate-root nil))
+         (org-generate-with-export "hugo/page"))
+       (cort--file-contents "content/blog/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")
+
+    ((with-cort--org-generate-buffer (format "\
+#+OPTIONS: prop:t
+#+NAME: root
+#+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
+  (concat \":org-generate-root: \"
+          (org-entry-get-with-inheritance \"root\")
+          (format \"%%s\" path))
+#+END_SRC
+#+MACRO: hugo-root-path (eval (org-sbe \"root\" (path $$1)))
+* hugo
+:PROPERTIES:
+:root: %s/
+:END:
+** page
+:PROPERTIES:
+{{{hugo-root-path(content/blog/)}}}
+:END:
+" cort--dir)
+       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
+       (let ((org-generate-root nil))
+         (org-generate-with-export "hugo/page"))
+       (cort--file-contents "content/blog/page.md"))
      "\
 ---
 title: \"xxx\"
