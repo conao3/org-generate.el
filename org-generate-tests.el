@@ -39,6 +39,16 @@
     (insert-file-contents path)
     (buffer-string)))
 
+(defmacro with-cort--org-generate-buffer (contents &rest body)
+  "Exec BODY in temp buffer that has CONTENTS."
+  (declare (indent 1))
+  `(let ((org-generate-root cort--dir)
+         (org-generate--file-buffer (get-buffer-create "*temp*")))
+     (with-current-buffer org-generate--file-buffer
+       (insert ,contents)
+       (goto-char (point-min))
+       ,@body)))
+
 
 ;;; Test definition
 
@@ -50,11 +60,7 @@
   (cort-generate-with-hook :equal
     (lambda () (mkdir cort--dir))
     (lambda () (ignore-errors (delete-directory cort--dir 'force)))
-    '(((let ((org-generate--file-buffer
-              (get-buffer-create "*org-generate*")))
-         (with-current-buffer org-generate--file-buffer
-           (erase-buffer)
-           (insert "\
+    '(((with-cort--org-generate-buffer "\
 * hugo
 ** page
 #+begin_src markdown
@@ -65,8 +71,8 @@
   ### 1. First
   xxxx
 #+end_src
-")
-           (buffer-string)))
+"
+         (buffer-string))
        "\
 * hugo
 ** page
@@ -80,12 +86,7 @@
 #+end_src
 ")
 
-      ((let ((org-generate-root cort--dir)
-             (org-generate--file-buffer
-              (get-buffer-create "*org-generate*")))
-         (with-current-buffer org-generate--file-buffer
-           (erase-buffer)
-           (insert "\
+      ((with-cort--org-generate-buffer "\
 * hugo
 ** page
 *** page
@@ -102,10 +103,10 @@
   ### 2. Second
   yyyy
 #+end_src
-")
-           (org-generate "hugo/page")
-           (cort--file-contents
-            (expand-file-name "page" cort--dir))))
+"
+         (org-generate "hugo/page")
+         (cort--file-contents
+          (expand-file-name "page" cort--dir)))
        "\
 ---
 title: \"xxx\"
