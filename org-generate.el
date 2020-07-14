@@ -56,6 +56,11 @@ syntax."
   :group 'org-generate
   :type 'boolean)
 
+(defcustom org-generate-show-save-message t
+  "If non-nil, show message after save files."
+  :group 'org-generate
+  :type 'boolean)
+
 (defvar org-generate-root nil)
 (defvar org-generate-mustache-info nil)
 (defvar org-generate--file-buffer nil)
@@ -208,7 +213,8 @@ If ROOT is non-nil, omit some conditions."
                  (srcbody* (mustache-render srcbody org-generate-mustache-info)))
             (with-temp-file file
               (insert srcbody*))
-            (message "[org-generate] Saved: %s" file))))
+            (when org-generate-show-save-message
+              (message "[org-generate] Saved: %s" file)))))
       (dolist (elm (cdr heading))
         (let ((default-directory
                 (expand-file-name title* default-directory)))
