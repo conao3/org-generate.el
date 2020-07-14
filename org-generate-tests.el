@@ -28,6 +28,15 @@
 (require 'cort)
 (require 'org-generate)
 
+(defun cort--file-contents (path)
+  "Get all contents of file located at PATH."
+  (with-temp-buffer
+    (insert-file-contents path)
+    (buffer-string)))
+
+
+;;; Test definition
+
 (cort-deftest org-generate/simple
   (cort-generate :equal
     '(((+ 2 3) 5))))
@@ -97,10 +106,8 @@
 #+end_src
 ")
            (org-generate "hugo/page")
-           (with-temp-buffer
-             (insert-file-contents
-              (expand-file-name "page" org-generate/onefile/dir))
-             (buffer-string))))
+           (cort--file-contents
+            (expand-file-name "page" org-generate/onefile/dir))))
        "\
 ---
 title: \"xxx\"
