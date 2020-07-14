@@ -48,7 +48,7 @@
   :group 'org-generate
   :type 'boolean)
 
-(defcustom org-generate-with-export-as-org nil
+(defcustom org-generate-with-export-as-org t
   "If non-nil, the target's definition is exported as org beforehand.
 By exporting as org before generating it is possible to use some additional org
 features like including files, macros replacements and the noweb reference
