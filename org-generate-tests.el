@@ -35,9 +35,12 @@
 
 (defun cort--file-contents (path)
   "Get all contents of file located at PATH from `cort--dir'."
-  (with-temp-buffer
-    (insert-file-contents (expand-file-name path cort--dir))
-    (buffer-string)))
+  (let ((path* (expand-file-name path cort--dir)))
+    (unless (file-readable-p path*)
+      (error "Missing file: %s" path*))
+    (with-temp-buffer
+      (insert-file-contents path*)
+      (buffer-string))))
 
 (defmacro with-cort--org-generate-buffer (contents &rest body)
   "Exec BODY in temp buffer that has CONTENTS."
