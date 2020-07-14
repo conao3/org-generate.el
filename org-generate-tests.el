@@ -49,6 +49,16 @@
        (goto-char (point-min))
        ,@body)))
 
+(defmacro cort-deftest--org-generate (name testlst)
+  "Define a test case with the NAME.
+TESTLST is list of (GIVEN EXPECT)."
+  (declare (indent 1))
+  `(cort-deftest ,name
+     (cort-generate-with-hook :equal
+       (lambda () (mkdir cort--dir))
+       (lambda () (ignore-errors (delete-directory cort--dir 'force)))
+       ,testlst)))
+
 
 ;;; Test definition
 
@@ -56,11 +66,8 @@
   (cort-generate :equal
     '(((+ 2 3) 5))))
 
-(cort-deftest org-generate/onefile
-  (cort-generate-with-hook :equal
-    (lambda () (mkdir cort--dir))
-    (lambda () (ignore-errors (delete-directory cort--dir 'force)))
-    '(((with-cort--org-generate-buffer "\
+(cort-deftest--org-generate org-generate/onefile
+  '(((with-cort--org-generate-buffer "\
 * hugo
 ** page
 #+begin_src markdown
@@ -72,8 +79,8 @@
   xxxx
 #+end_src
 "
-         (buffer-string))
-       "\
+       (buffer-string))
+     "\
 * hugo
 ** page
 #+begin_src markdown
@@ -86,7 +93,7 @@
 #+end_src
 ")
 
-      ((with-cort--org-generate-buffer "\
+    ((with-cort--org-generate-buffer "\
 * hugo
 ** page
 *** page
@@ -104,9 +111,9 @@
   yyyy
 #+end_src
 "
-         (org-generate "hugo/page")
-         (cort--file-contents "page"))
-       "\
+       (org-generate "hugo/page")
+       (cort--file-contents "page"))
+     "\
 ---
 title: \"xxx\"
 date: xx/xx/xx
@@ -118,7 +125,7 @@ xxxx
 
 ### 2. Second
 yyyy
-"))))
+")))
 
 ;; (provide 'org-generate-tests)
 
