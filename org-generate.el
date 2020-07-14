@@ -203,10 +203,11 @@ If ROOT is non-nil, omit some conditions."
               (dired root))))))))
 
 (defun org-generate--create-string-for-export (target)
-  "Returns the string to use for export to org for TARGET definition.
-It returns the target's heading and its subtree, its parent heading including
-the content before the first child , and the content before the first heading.
-This is needed to avoid macro replacments in parts that are not relevant."
+  "Return the string to use for export to org for TARGET definition.
+The string returned consists of the target's heading and its subtree, its parent
+heading including the content before the first child , and the content before
+the first heading. This is needed to avoid macro replacments in parts that are
+not relevant."
   (with-current-buffer (org-generate-file-buffer)
     (let ((heading (org-generate-search-heading target)))
       (unless heading
@@ -232,7 +233,7 @@ This is needed to avoid macro replacments in parts that are not relevant."
                 regions))))))
 
 (defun org-generate--export-string-as-org (string)
-  "Exports the STRING as org and returns the exported string.
+  "Export the STRING as org and return the exported string.
 Properties are exported as well."
   (require 'ox-org)
   (let ((org-export-with-properties t))
