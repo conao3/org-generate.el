@@ -190,14 +190,15 @@ If ROOT is non-nil, omit some conditions."
       (if (string-suffix-p "/" title*)
           (mkdir (expand-file-name title* default-directory) 'parent)
         (let ((src
-               (save-restriction
-                 (narrow-to-region
-                  (plist-get heading* :begin) (plist-get heading* :end))
-                 (goto-char (point-min))
-                 (let ((case-fold-search t))
-                   (when (search-forward "#+begin_src" nil 'noerror)
-                     (goto-char (match-beginning 0))))
-                 (org-element-src-block-parser (point-max) nil))))
+               (save-excursion
+                 (save-restriction
+                   (narrow-to-region
+                    (plist-get heading* :begin) (plist-get heading* :end))
+                   (goto-char (point-min))
+                   (let ((case-fold-search t))
+                     (when (search-forward "#+begin_src" nil 'noerror)
+                       (goto-char (match-beginning 0))))
+                   (org-element-src-block-parser (point-max) nil)))))
           (unless src
             (error "Node %s has no src block" title*))
           (let* ((file (expand-file-name title* default-directory))
