@@ -28,6 +28,11 @@
 (require 'cort)
 (require 'org-generate)
 
+(setq dir
+      (expand-file-name
+       (format "org-generate-%04d" (random (round 1e4)))
+       temporary-file-directory))
+
 (defun cort--file-contents (path)
   "Get all contents of file located at PATH."
   (with-temp-buffer
@@ -43,15 +48,8 @@
 
 (cort-deftest org-generate/onefile
   (cort-generate-with-hook :equal
-    (lambda ()
-      (setq dir
-            (expand-file-name
-             (format "org-generate-%04d" (random (round 1e4)))
-             temporary-file-directory))
-      (mkdir dir))
-    (lambda ()
-      (ignore-errors
-        (delete-directory dir 'force)))
+    (lambda () (mkdir dir))
+    (lambda () (ignore-errors (delete-directory dir 'force)))
     '(((let ((org-generate--file-buffer
               (get-buffer-create "*org-generate*")))
          (with-current-buffer org-generate--file-buffer
