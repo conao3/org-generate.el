@@ -28,7 +28,7 @@
 (require 'cort)
 (require 'org-generate)
 
-(setq dir
+(setq cort--dir
       (expand-file-name
        (format "org-generate-%04d" (random (round 1e4)))
        temporary-file-directory))
@@ -48,8 +48,8 @@
 
 (cort-deftest org-generate/onefile
   (cort-generate-with-hook :equal
-    (lambda () (mkdir dir))
-    (lambda () (ignore-errors (delete-directory dir 'force)))
+    (lambda () (mkdir cort--dir))
+    (lambda () (ignore-errors (delete-directory cort--dir 'force)))
     '(((let ((org-generate--file-buffer
               (get-buffer-create "*org-generate*")))
          (with-current-buffer org-generate--file-buffer
@@ -80,7 +80,7 @@
 #+end_src
 ")
 
-      ((let ((org-generate-root dir)
+      ((let ((org-generate-root cort--dir)
              (org-generate--file-buffer
               (get-buffer-create "*org-generate*")))
          (with-current-buffer org-generate--file-buffer
@@ -105,7 +105,7 @@
 ")
            (org-generate "hugo/page")
            (cort--file-contents
-            (expand-file-name "page" dir))))
+            (expand-file-name "page" cort--dir))))
        "\
 ---
 title: \"xxx\"
