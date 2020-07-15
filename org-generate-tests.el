@@ -257,6 +257,10 @@ xxxx
 ")
 
     ((with-cort--org-generate-buffer (format "\
+* hugo
+:PROPERTIES:
+:root: %s/
+:END:
 #+NAME: root
 #+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
   (concat \":org-generate-root: \"
@@ -264,10 +268,6 @@ xxxx
           (format \"%%s\" path))
 #+END_SRC
 #+MACRO: hugo-root-path (eval (org-sbe \"root\" (path $$1)))
-* hugo
-:PROPERTIES:
-:root: %s/
-:END:
 ** page
 :PROPERTIES:
 {{{hugo-root-path(content/blog/)}}}

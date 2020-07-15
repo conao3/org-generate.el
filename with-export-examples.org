@@ -17,7 +17,10 @@ heading. This is important so you know which macros and source blocks are
 available.
 
 Use ~M-x org-org-export-as-org~ while inside the org-capture template buffer to
-see what results you will get before running the function.
+see what results you will get before running the function. Make sure to add
+~#+OPTIONS: prop:t~ at the top if any properties need to be exported (this is
+not needed for the actually export as ~org-generate~ automatically exports the
+properties).
 
 ** Table of Contents
 
@@ -108,7 +111,6 @@ Could use a macro as well with ~org-sbe~:
   {{{licence}}}
 #+END_SRC
 
-
 ** Set the :org-generate-root: property with a macro
 
 To make this work you have to use a macro that sets the whole line.
@@ -162,7 +164,11 @@ The macro will be replaced with:
   :org-generate-root: ~/dev/repos/hugo-src/content/blog/
 #+END_SRC
 
-This could also be separated into a source block and macro:
+This could also be separated into a source block and macro. While the macro is
+evaluated at the place you use it (each time), the source block is evaluated
+where it actually is even when calling from a macro. Therefore it needs to be
+moved below the heading to make it work. This means that it will always use the
+same root and therefore it is not a good solution for this:
 
 #+BEGIN_SRC org
   ,#+OPTIONS: prop:t
@@ -181,6 +187,22 @@ This could also be separated into a source block and macro:
   :PROPERTIES:
   {{{hugo-root-path(content/blog/)}}}
   :END:
+
+  ,* another
+  :PROPERTIES:
+  :root:     ~/another/
+  :END:
+
+  ,** page
+  :PROPERTIES:
+  {{{hugo-root-path(content/blog/)}}}
+  :END:
+#+END_SRC
+
+In this case both are unexpectedly replaced with:
+
+#+BEGIN_SRC org
+  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
 #+END_SRC
 
 When using a string for a variable with ~org-sbe~ it has to be prefixed with
