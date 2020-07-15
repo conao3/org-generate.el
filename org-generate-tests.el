@@ -133,9 +133,8 @@ xxxx
 yyyy
 ")))
 
-(cort-deftest--org-generate org-genearte/heading-with-macro
+(cort-deftest--org-generate org-generate/heading-with-macro
   '(((with-cort--org-generate-buffer "\
-#+OPTIONS: prop:t
 #+MACRO: filename page.md
 * hugo
 ** page
@@ -160,9 +159,8 @@ title: \"xxx\"
 xxxx
 ")))
 
-(cort-deftest--org-generate org-genearte/heading-with-macro-using-user-input
+(cort-deftest--org-generate org-generate/heading-with-macro-using-user-input
   '(((with-cort--org-generate-buffer "\
-#+OPTIONS: prop:t
 #+MACRO: get-directory (eval (format \"%s/\" (read-string \"Filename: \")))
 * hugo
 ** page
@@ -190,10 +188,10 @@ title: \"xxx\"
 xxxx
 ")))
 
-(cort-deftest--org-generate org-genearte/set-variable-with-macro
-  '(((with-cort--org-generate-buffer "\
-#+OPTIONS: prop:t
+(cort-deftest--org-generate org-generate/set-variable-with-macro
+  '(((with-cort--org-generate-buffer (format "\
 #+NAME: hugo-root
+: %s/
 #+MACRO: hugo-root (eval (concat \":org-generate-root: \" (org-sbe \"hugo-root\") $1))
 * hugo
 ** page
@@ -209,11 +207,10 @@ xxxx
   ### 1. First
   xxxx
 #+end_src
-"
+" cort--dir)
+       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
        (let ((org-generate-root nil))
-         (with-simulated-input
-             (format "%s RET" cort--dir)
-           (org-generate "hugo/page")))
+         (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))
      "\
 ---
@@ -224,9 +221,8 @@ title: \"xxx\"
 xxxx
 ")))
 
-(cort-deftest--org-generate org-genearte/set-variable-using-property
+(cort-deftest--org-generate org-generate/set-variable-using-property
   '(((with-cort--org-generate-buffer (format "\
-#+OPTIONS: prop:t
 #+MACRO: hugo-root-path (eval (concat \":org-generate-root: \" (org-entry-get-with-inheritance \"root\") $1))
 * hugo
 :PROPERTIES:
@@ -260,7 +256,6 @@ xxxx
 ")
 
     ((with-cort--org-generate-buffer (format "\
-#+OPTIONS: prop:t
 #+NAME: root
 #+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
   (concat \":org-generate-root: \"

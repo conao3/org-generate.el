@@ -123,8 +123,8 @@ the macro as ~$1~.
   ,#+OPTIONS: prop:t
   ,* hugo
   ,#+NAME: hugo-root
-  ,#+MACRO: hugo-root (eval (concat ":org-generate-root: " (org-sbe "hugo-root") $1))
   : ~/dev/repos/hugo-src/
+  ,#+MACRO: hugo-root (eval (concat ":org-generate-root: " (org-sbe "hugo-root") $1))
   ,** page
   :PROPERTIES:
   {{{hugo-root(content/blog/)}}}
