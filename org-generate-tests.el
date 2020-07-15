@@ -49,6 +49,7 @@
   `(let ((org-generate-root cort--dir)
          (org-generate--file-buffer (get-buffer-create "*temp*")))
      (with-current-buffer org-generate--file-buffer
+       (erase-buffer)
        (insert ,contents)
        (goto-char (point-min))
        ,@body)))
