@@ -70,6 +70,26 @@ TESTLST is list of (GIVEN EXPECT)."
 
 (setq org-generate-show-save-message nil)
 
+;; silence test
+;; it maybe hide some important message!
+(progn
+  (require 'ob-emacs-lisp)
+  (fset 'message 'ignore)
+  (defun org-babel-expand-body:emacs-lisp (body params)
+    "Expand BODY according to PARAMS, return the expanded body."
+    (let ((vars (org-babel--get-vars params))
+          (print-level nil)
+          (print-length nil))
+      (if (null vars) (concat body "\n")
+        (format "(let (%s)\n%s\n)"
+                (mapconcat
+                 (lambda (var)
+                   (format "%S"
+                           ;; (print `(,(car var) ',(cdr var)))
+                           `(,(car var) ',(cdr var))))
+                 vars "\n      ")
+                body)))))
+
 (cort-deftest org-generate/simple
   (cort-generate :equal
     '(((+ 2 3) 5))))
