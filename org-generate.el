@@ -151,12 +151,12 @@ not relevant."
             (lambda (e) (buffer-substring-no-properties (car e) (cdr e)))
             regions))))
 
+(defvar org-export-with-properties)
 (defun org-generate--export-string-as-org (string)
   "Export the STRING as org and return the exported string.
 Properties are exported as well."
   (require 'ox-org)
   (let ((org-export-with-properties t))
-    (ignore org-export-with-properties)
     (org-export-string-as string 'org t)))
 
 (defun org-generate--with-export (heading)
