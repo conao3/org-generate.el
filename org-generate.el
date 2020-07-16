@@ -129,7 +129,7 @@ syntax."
   "Return the string to use for export to org for HEADING in the current buffer.
 The string returned consists of the target's heading and its subtree, its parent
 heading including the content before the first child , and the content before
-the first heading. This is needed to avoid macro replacments in parts that are
+the first heading.  This is needed to avoid macro replacments in parts that are
 not relevant."
   (let* ((start (plist-get (car heading) :begin))
          regions)
