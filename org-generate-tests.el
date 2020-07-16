@@ -47,7 +47,8 @@
   "Exec BODY in temp buffer that has CONTENTS."
   (declare (indent 1))
   `(let ((org-generate-root cort--dir)
-         (org-generate--file-buffer (get-buffer-create "*temp*")))
+         (org-generate--file-buffer (get-buffer-create "*temp*"))
+         (org-confirm-babel-evaluate nil))
      (with-current-buffer org-generate--file-buffer
        (erase-buffer)
        (insert ,contents)
