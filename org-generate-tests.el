@@ -26,28 +26,78 @@
 ;;; Code:
 
 (require 'cort)
+(require 'with-simulated-input)
 (require 'org-generate)
+
+(setq cort--dir
+      (expand-file-name
+       (format "org-generate-%04d" (random (round 1e4)))
+       temporary-file-directory))
+
+(defun cort--file-contents (path)
+  "Get all contents of file located at PATH from `cort--dir'."
+  (let ((path* (expand-file-name path cort--dir)))
+    (unless (file-readable-p path*)
+      (error "Missing file: %s" path*))
+    (with-temp-buffer
+      (insert-file-contents path*)
+      (buffer-string))))
+
+(defmacro with-cort--org-generate-buffer (contents &rest body)
+  "Exec BODY in temp buffer that has CONTENTS."
+  (declare (indent 1))
+  `(let ((org-generate-root cort--dir)
+         (org-generate--file-buffer (get-buffer-create "*temp*"))
+         (org-confirm-babel-evaluate nil))
+     (with-current-buffer org-generate--file-buffer
+       (erase-buffer)
+       (insert ,contents)
+       (goto-char (point-min))
+       (let ((default-directory cort--dir)
+             (buffer-file-name (expand-file-name "temp.org")))
+         ,@body))))
+
+(defmacro cort-deftest--org-generate (name testlst)
+  "Define a test case with the NAME.
+TESTLST is list of (GIVEN EXPECT)."
+  (declare (indent 1))
+  `(cort-deftest ,name
+     (cort-generate-with-hook :equal
+       (lambda () (mkdir cort--dir))
+       (lambda () (ignore-errors (delete-directory cort--dir 'force)))
+       ,testlst)))
+
+
+;;; Test definition
+
+(setq org-generate-show-save-message nil)
+
+;; silence test
+;; it maybe hide some important message!
+(progn
+  (require 'ob-emacs-lisp)
+  (fset 'message 'ignore)
+  (defun org-babel-expand-body:emacs-lisp (body params)
+    "Expand BODY according to PARAMS, return the expanded body."
+    (let ((vars (org-babel--get-vars params))
+          (print-level nil)
+          (print-length nil))
+      (if (null vars) (concat body "\n")
+        (format "(let (%s)\n%s\n)"
+                (mapconcat
+                 (lambda (var)
+                   (format "%S"
+                           ;; (print `(,(car var) ',(cdr var)))
+                           `(,(car var) ',(cdr var))))
+                 vars "\n      ")
+                body)))))
 
 (cort-deftest org-generate/simple
   (cort-generate :equal
     '(((+ 2 3) 5))))
 
-(cort-deftest org-generate/onefile
-  (cort-generate-with-hook :equal
-    (lambda ()
-      (setq org-generate/onefile/dir
-            (expand-file-name
-             (format "org-generate-%04d" (random (round 1e4)))
-             temporary-file-directory))
-      (mkdir org-generate/onefile/dir))
-    (lambda ()
-      (ignore-errors
-        (delete-directory org-generate/onefile/dir 'force)))
-    '(((let ((org-generate--file-buffer
-              (get-buffer-create "*org-generate*")))
-         (with-current-buffer org-generate--file-buffer
-           (erase-buffer)
-           (insert "\
+(cort-deftest--org-generate org-generate/onefile
+  '(((with-cort--org-generate-buffer "\
 * hugo
 ** page
 #+begin_src markdown
@@ -58,9 +108,9 @@
   ### 1. First
   xxxx
 #+end_src
-")
-           (buffer-string)))
-       "\
+"
+       (buffer-string))
+     "\
 * hugo
 ** page
 #+begin_src markdown
@@ -73,12 +123,7 @@
 #+end_src
 ")
 
-      ((let ((org-generate-root org-generate/onefile/dir)
-             (org-generate--file-buffer
-              (get-buffer-create "*org-generate*")))
-         (with-current-buffer org-generate--file-buffer
-           (erase-buffer)
-           (insert "\
+    ((with-cort--org-generate-buffer "\
 * hugo
 ** page
 *** page
@@ -95,13 +140,10 @@
   ### 2. Second
   yyyy
 #+end_src
-")
-           (org-generate "hugo/page")
-           (with-temp-buffer
-             (insert-file-contents
-              (expand-file-name "page" org-generate/onefile/dir))
-             (buffer-string))))
-       "\
+"
+       (org-generate "hugo/page")
+       (cort--file-contents "page"))
+     "\
 ---
 title: \"xxx\"
 date: xx/xx/xx
@@ -113,7 +155,311 @@ xxxx
 
 ### 2. Second
 yyyy
-"))))
+")))
+
+(cort-deftest--org-generate org-generate/heading-with-macro
+  '(((with-cort--org-generate-buffer "\
+#+MACRO: filename page.md
+* hugo
+** page
+*** {{{filename}}}
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (org-generate "hugo/page")
+       (cort--file-contents "page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-generate/heading-with-macro-using-user-input
+  '(((with-cort--org-generate-buffer "\
+#+MACRO: get-directory (eval (format \"%s/\" (read-string \"Filename: \")))
+* hugo
+** page
+*** {{{get-directory}}}
+**** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (with-simulated-input
+           "awesome RET"
+         (org-generate "hugo/page"))
+       (cort--file-contents "awesome/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-generate/set-variable-with-macro
+  '(((with-cort--org-generate-buffer "\
+#+NAME: hugo-root
+: ./
+#+MACRO: hugo-root (eval (concat \":org-generate-root: \" (org-sbe \"hugo-root\") $1))
+* hugo
+** page
+:PROPERTIES:
+{{{hugo-root(content/blog/)}}}
+:END:
+*** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (mkdir "content/blog" 'parents)
+       (let ((org-generate-root nil))
+         (org-generate "hugo/page"))
+       (cort--file-contents "content/blog/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-generate/set-variable-using-property
+  '(((with-cort--org-generate-buffer "\
+#+MACRO: hugo-root-path (eval (concat \":org-generate-root: \" (org-entry-get-with-inheritance \"root\") $1))
+* hugo
+:PROPERTIES:
+:root: ./
+:END:
+** page
+:PROPERTIES:
+{{{hugo-root-path(content/blog/)}}}
+:END:
+*** page.md
+#+begin_src markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+end_src
+"
+       (mkdir "content/blog" 'parents)
+       (let ((org-generate-root nil))
+         (org-generate "hugo/page"))
+       (cort--file-contents "content/blog/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")
+
+    ((with-cort--org-generate-buffer "\
+* hugo
+:PROPERTIES:
+:root: ./
+:END:
+#+NAME: root
+#+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
+  (concat \":org-generate-root: \"
+          (org-entry-get-with-inheritance \"root\")
+          (format \"%s\" path))
+#+END_SRC
+#+MACRO: hugo-root-path (eval (org-sbe \"root\" (path $$1)))
+** page
+:PROPERTIES:
+{{{hugo-root-path(content/blog/)}}}
+:END:
+"
+       (mkdir "content/blog" 'parents)
+       (let ((org-generate-root nil))
+         (org-generate "hugo/page"))
+       (cort--file-contents "content/blog/page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-generate/include-file
+  '(((with-cort--org-generate-buffer "\
+* project
+** general
+*** LICENSE
+#+INCLUDE: \"./mit.txt\" src text
+"
+       (with-temp-file "mit.txt"
+         (insert "\
+MIT License
+
+Copyright (c) 2020 Naoya Yamashita
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the \"Software\"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"))
+       (org-generate "project/general")
+       (cort--file-contents "LICENSE"))
+     "\
+MIT License
+
+Copyright (c) 2020 Naoya Yamashita
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the \"Software\"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+")))
+
+(cort-deftest--org-generate org-generate/split-template-files
+  '(((with-cort--org-generate-buffer "\
+* hugo
+** page
+#+INCLUDE: hugo.org::*page :only-contents t
+"
+       (with-temp-file "hugo.org"
+         (insert "\
+* page
+** page.md
+#+BEGIN_SRC markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+END_SRC
+"))
+       (org-generate "hugo/page")
+       (cort--file-contents "page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
+(cort-deftest--org-generate org-generate/noweb-reference
+  '(((with-cort--org-generate-buffer "\
+#+NAME: year
+: 2020
+
+#+NAME: whoami
+#+BEGIN_SRC sh
+  # whoami
+  WHOAMI=conao3; echo $WHOAMI
+#+END_SRC
+
+* project
+** general
+*** LICENSE
+#+begin_src text :noweb yes
+  MIT License
+
+  Copyright (c) <<year()>> <<whoami()>>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the \"Software\"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+#+end_src
+"
+       (require 'ob-shell)
+       (org-generate "project/general")
+       (cort--file-contents "LICENSE"))
+     "\
+MIT License
+
+Copyright (c) 2020 conao3
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the \"Software\"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+")))
 
 ;; (provide 'org-generate-tests)
 

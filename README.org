@@ -225,10 +225,16 @@ Run =M-x org-generate= once you have created a template with an org document. Th
 When called interactively, it presents the folder where the template is extracted in a =dired=.
 
 * Customize
-- org-generate-file :: The org file is used as temprate definition.
+- org-generate-file :: The org file is used as template definition. \\
   (default ={{user-emacs-directory}}/org-generate.org=)
-
+  #+HTML: <br>
   =M-x org-generate-edit= to edit template file.
+- org-generate-with-export-as-org :: If non-nil, the target's definition is
+  exported as org beforehand. By exporting as org before generating it is
+  possible to use some additional org features like including files, macros
+  replacements and the noweb reference syntax. Some examples are shown in
+  [[with-export-examples.org]]. \\
+  (default =t=)
 
 * Information
 ** Community

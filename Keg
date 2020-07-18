@@ -6,4 +6,4 @@
  (org-generate
    (recipe . (org-generate :fetcher github :repo "conao3/org-generate.el"))))
 
-(dev-dependency cort)
+(dev-dependency cort with-simulated-input)

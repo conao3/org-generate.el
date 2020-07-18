@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020  Naoya Yamashita
 
 ;; Author: Naoya Yamashita <conao3@gmail.com>
-;; Version: 1.0.3
+;; Version: 1.0.4
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
@@ -45,6 +45,19 @@
 
 (defcustom org-generate-edit-recursive-edit nil
   "If non-nil, use `recursive-edit' for `org-generate-edit'."
+  :group 'org-generate
+  :type 'boolean)
+
+(defcustom org-generate-with-export-as-org t
+  "If non-nil, the target's definition is exported as org beforehand.
+By exporting as org before generating it is possible to use some additional org
+features like including files, macros replacements and the noweb reference
+syntax."
+  :group 'org-generate
+  :type 'boolean)
+
+(defcustom org-generate-show-save-message t
+  "If non-nil, show message after save files."
   :group 'org-generate
   :type 'boolean)
 
@@ -112,6 +125,51 @@
                 (tmp (funcall fn h2 tmp)))
       tmp)))
 
+(defun org-generate--create-string-for-export (heading)
+  "Return the string to use for export to org for HEADING in the current buffer.
+The string returned consists of the target's heading and its subtree, its parent
+heading including the content before the first child , and the content before
+the first heading.  This is needed to avoid macro replacments in parts that are
+not relevant."
+  (let* ((start (plist-get (car heading) :begin))
+         regions)
+    (save-excursion
+      (save-match-data
+        ;; Target heading and its subtree.
+        (push (cons start (plist-get (car heading) :end)) regions)
+        ;; Parent's heading and content.
+        (goto-char start)
+        (org-up-heading-safe)
+        (push (cons (point) (outline-next-heading)) regions)
+        ;; Content before first heading.
+        (goto-char (point-min))
+        (unless (org-at-heading-p)
+          (push (cons (point-min) (outline-next-heading)) regions))))
+    ;; Create the string for export.
+    (apply #'concat
+           (mapcar
+            (lambda (e) (buffer-substring-no-properties (car e) (cdr e)))
+            regions))))
+
+(defvar org-export-with-properties)
+(defun org-generate--export-string-as-org (string)
+  "Export the STRING as org and return the exported string.
+Properties are exported as well."
+  (require 'ox-org)
+  (let ((org-export-with-properties t))
+    (org-export-string-as string 'org t)))
+
+(defun org-generate--with-export (heading)
+  "Return a new buffer with the definition for HEADING exported as org."
+  (let* ((string-to-export (org-generate--create-string-for-export heading))
+         (exported-string (org-generate--export-string-as-org string-to-export))
+         (export-buffer (generate-new-buffer "*org-generate-temp*")))
+    (with-current-buffer export-buffer
+      (insert exported-string)
+      (let ((org-inhibit-startup t))
+        (org-mode)))
+    export-buffer))
+
 ;;;###autoload
 (defun org-generate-edit ()
   "Open `org-generate-file'."
@@ -134,17 +192,20 @@ If ROOT is non-nil, omit some conditions."
                 (title* (mustache-render title org-generate-mustache-info)))
       (when (and (not (string-suffix-p "/" title*)) (cdr heading))
         (error "Heading %s is not suffixed \"/\", but it have childlen" title*))
+      (when (string-empty-p title*)
+        (error "Heading %s will be empty string.  We could not create file with empty name" title))
       (if (string-suffix-p "/" title*)
           (mkdir (expand-file-name title* default-directory) 'parent)
         (let ((src
-               (save-restriction
-                 (narrow-to-region
-                  (plist-get heading* :begin) (plist-get heading* :end))
-                 (goto-char (point-min))
-                 (let ((case-fold-search t))
-                   (when (search-forward "#+begin_src" nil 'noerror)
-                     (goto-char (match-beginning 0))))
-                 (org-element-src-block-parser (point-max) nil))))
+               (save-excursion
+                 (save-restriction
+                   (narrow-to-region
+                    (plist-get heading* :begin) (plist-get heading* :end))
+                   (goto-char (point-min))
+                   (let ((case-fold-search t))
+                     (when (search-forward "#+begin_src" nil 'noerror)
+                       (goto-char (match-beginning 0))))
+                   (org-element-src-block-parser (point-max) nil)))))
           (unless src
             (error "Node %s has no src block" title*))
           (let* ((file (expand-file-name title* default-directory))
@@ -152,7 +213,8 @@ If ROOT is non-nil, omit some conditions."
                  (srcbody* (mustache-render srcbody org-generate-mustache-info)))
             (with-temp-file file
               (insert srcbody*))
-            (message "[org-generate] Saved: %s" file))))
+            (when org-generate-show-save-message
+              (message "[org-generate] Saved: %s" file)))))
       (dolist (elm (cdr heading))
         (let ((default-directory
                 (expand-file-name title* default-directory)))
@@ -160,47 +222,59 @@ If ROOT is non-nil, omit some conditions."
 
 ;;;###autoload
 (defun org-generate (target)
-  "Gerenate files from org document using TARGET definition."
+  "Generate files from org document using TARGET definition."
   (interactive (list
                 (completing-read
                  "Generate: "
                  (org-generate-candidate) nil 'match)))
-  (let ((dir default-directory))
+  (let ((dir default-directory)
+        export-buffer)
     (with-current-buffer (org-generate-file-buffer)
       (let ((heading (org-generate-search-heading target)))
         (unless heading
           (error "%s is not defined at %s" target org-generate-file))
-        (let* ((fn (lambda (elm)
-                     (org-entry-get-multivalued-property
-                      (plist-get (car heading) :begin)
-                      (symbol-name elm))))
-               (root (funcall fn 'org-generate-root))
-               (vars (funcall fn 'org-generate-variable))
-               (beforehooks (funcall fn 'org-generate-before-hook))
-               (afterhooks  (funcall fn 'org-generate-after-hook)))
-          (setq root (or org-generate-root
-                         (car root)
-                         (read-file-name "Generate root: " dir)))
-          (unless (file-directory-p root)
-            (error "%s is not directory" root))
-          (let ((default-directory root)
-                (org-generate-mustache-info
-                 (or org-generate-mustache-info
-                     (org-generate--hash-table-from-alist
-                      (mapcar (lambda (elm)
-                                (cons elm (read-string (format "%s: " elm))))
-                              vars)))))
-            (when beforehooks
-              (dolist (elm beforehooks)
-                (funcall (intern elm))))
+        ;; Export as org to new buffer before if needed.
+        (when org-generate-with-export-as-org
+          (setq export-buffer (org-generate--with-export heading))
+          (set-buffer export-buffer)
+          ;; Update heading positions.
+          (let ((org-generate--file-buffer export-buffer))
+            (setq heading (org-generate-search-heading target))))
+        (unwind-protect
+            (let* ((fn (lambda (elm)
+                         (org-entry-get-multivalued-property
+                          (plist-get (car heading) :begin)
+                          (symbol-name elm))))
+                   (root (funcall fn 'org-generate-root))
+                   (vars (funcall fn 'org-generate-variable))
+                   (beforehooks (funcall fn 'org-generate-before-hook))
+                   (afterhooks  (funcall fn 'org-generate-after-hook)))
+              (setq root (expand-file-name
+                          (or org-generate-root
+                              (car root)
+                              (read-file-name "Generate root: " dir))))
+              (unless (file-directory-p root)
+                (error "%s is not directory" root))
+              (let ((default-directory root)
+                    (org-generate-mustache-info
+                     (or org-generate-mustache-info
+                         (org-generate--hash-table-from-alist
+                          (mapcar (lambda (elm)
+                                    (cons elm (read-string (format "%s: " elm))))
+                                  vars)))))
+                (when beforehooks
+                  (dolist (elm beforehooks)
+                    (funcall (intern elm))))
 
-            (org-generate-1 t heading)
+                (org-generate-1 t heading)
 
-            (when afterhooks
-              (dolist (elm afterhooks)
-                (funcall (intern elm))))
-            (when (called-interactively-p 'interactive)
-              (dired root))))))))
+                (when afterhooks
+                  (dolist (elm afterhooks)
+                    (funcall (intern elm))))
+                (when (called-interactively-p 'interactive)
+                  (dired root))))
+          (when export-buffer
+            (kill-buffer export-buffer)))))))
 
 (provide 'org-generate)
 
