@@ -53,7 +53,9 @@
        (erase-buffer)
        (insert ,contents)
        (goto-char (point-min))
-       ,@body)))
+       (let ((default-directory cort--dir)
+             (buffer-file-name (expand-file-name "temp.org")))
+         ,@body))))
 
 (defmacro cort-deftest--org-generate (name testlst)
   "Define a test case with the NAME.
@@ -308,13 +310,13 @@ xxxx
 ")))
 
 (cort-deftest--org-generate org-generate/include-file
-  '(((with-cort--org-generate-buffer (format "\
+  '(((with-cort--org-generate-buffer "\
 * project
 ** general
 *** LICENSE
-#+INCLUDE: \"%s/mit.txt\" src text
-" cort--dir)
-       (with-temp-file (expand-file-name "mit.txt" cort--dir)
+#+INCLUDE: \"./mit.txt\" src text
+"
+       (with-temp-file "mit.txt"
          (insert "\
 MIT License
 
