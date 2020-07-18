@@ -213,9 +213,9 @@ xxxx
 ")))
 
 (cort-deftest--org-generate org-generate/set-variable-with-macro
-  '(((with-cort--org-generate-buffer (format "\
+  '(((with-cort--org-generate-buffer "\
 #+NAME: hugo-root
-: %s/
+: ./
 #+MACRO: hugo-root (eval (concat \":org-generate-root: \" (org-sbe \"hugo-root\") $1))
 * hugo
 ** page
@@ -231,8 +231,8 @@ xxxx
   ### 1. First
   xxxx
 #+end_src
-" cort--dir)
-       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
+"
+       (mkdir "content/blog" 'parents)
        (let ((org-generate-root nil))
          (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))
@@ -246,11 +246,11 @@ xxxx
 ")))
 
 (cort-deftest--org-generate org-generate/set-variable-using-property
-  '(((with-cort--org-generate-buffer (format "\
+  '(((with-cort--org-generate-buffer "\
 #+MACRO: hugo-root-path (eval (concat \":org-generate-root: \" (org-entry-get-with-inheritance \"root\") $1))
 * hugo
 :PROPERTIES:
-:root: %s/
+:root: ./
 :END:
 ** page
 :PROPERTIES:
@@ -265,8 +265,8 @@ xxxx
   ### 1. First
   xxxx
 #+end_src
-" cort--dir)
-       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
+"
+       (mkdir "content/blog" 'parents)
        (let ((org-generate-root nil))
          (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))
@@ -279,24 +279,24 @@ title: \"xxx\"
 xxxx
 ")
 
-    ((with-cort--org-generate-buffer (format "\
+    ((with-cort--org-generate-buffer "\
 * hugo
 :PROPERTIES:
-:root: %s/
+:root: ./
 :END:
 #+NAME: root
 #+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
   (concat \":org-generate-root: \"
           (org-entry-get-with-inheritance \"root\")
-          (format \"%%s\" path))
+          (format \"%s\" path))
 #+END_SRC
 #+MACRO: hugo-root-path (eval (org-sbe \"root\" (path $$1)))
 ** page
 :PROPERTIES:
 {{{hugo-root-path(content/blog/)}}}
 :END:
-" cort--dir)
-       (mkdir (expand-file-name "content/blog" cort--dir) 'parents)
+"
+       (mkdir "content/blog" 'parents)
        (let ((org-generate-root nil))
          (org-generate "hugo/page"))
        (cort--file-contents "content/blog/page.md"))

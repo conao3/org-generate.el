@@ -249,9 +249,10 @@ If ROOT is non-nil, omit some conditions."
                    (vars (funcall fn 'org-generate-variable))
                    (beforehooks (funcall fn 'org-generate-before-hook))
                    (afterhooks  (funcall fn 'org-generate-after-hook)))
-              (setq root (or org-generate-root
-                             (car root)
-                             (read-file-name "Generate root: " dir)))
+              (setq root (expand-file-name
+                          (or org-generate-root
+                              (car root)
+                              (read-file-name "Generate root: " dir))))
               (unless (file-directory-p root)
                 (error "%s is not directory" root))
               (let ((default-directory root)
