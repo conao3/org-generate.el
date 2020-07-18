@@ -366,6 +366,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ")))
 
+(cort-deftest--org-generate org-generate/split-template-files
+  '(((with-cort--org-generate-buffer "\
+* hugo
+** page
+#+INCLUDE: hugo.org::*page :only-contents t
+"
+       (with-temp-file "hugo.org"
+         (insert "\
+* page
+** page.md
+#+BEGIN_SRC markdown
+  ---
+  title: \"xxx\"
+  ---
+
+  ### 1. First
+  xxxx
+#+END_SRC
+"))
+       (org-generate "hugo/page")
+       (cort--file-contents "page.md"))
+     "\
+---
+title: \"xxx\"
+---
+
+### 1. First
+xxxx
+")))
+
 ;; (provide 'org-generate-tests)
 
 ;; Local Variables:
