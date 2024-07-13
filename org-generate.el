@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020  Naoya Yamashita
 
 ;; Author: Naoya Yamashita <conao3@gmail.com>
-;; Version: 1.0.5
+;; Version: 1.0.6
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
@@ -84,27 +84,23 @@ syntax."
 (defun org-generate-get-heading ()
   "Get `org' heading."
   (with-current-buffer (org-generate-file-buffer)
-    (letrec ((fn (lambda (elm)
-                   (mapcar
-                    (lambda (elm)
-                      (when (eq (car elm) 'headline)
-                        (cons
-                         (nth 1 elm)
-                         (funcall fn (cddr elm)))))
-                    elm))))
-      (funcall
-       fn
-       (org-element-contents
-        (org-element-parse-buffer 'headline))))))
+    (let ((tmp-heading (thread-last
+                          (org-element-parse-buffer 'headline)
+                          org-element-contents
+                          car)))
+      (thread-last
+        tmp-heading
+        org-element-parent
+        org-element-contents))))
 
 (defun org-generate-candidate ()
   "Get `org' candidate heading for `current-buffer'."
   (let (res)
     (dolist (h1 (org-generate-get-heading))
-      (dolist (h2 (cdr h1))
+      (dolist (h2 (org-element-contents h1))
         (push (format "%s/%s"
-                      (plist-get (car h1) :raw-value)
-                      (plist-get (car h2) :raw-value))
+                      (org-element-property :title h1)
+                      (org-element-property :title h2))
               res)))
     (nreverse res)))
 
@@ -113,16 +109,13 @@ syntax."
   (let* ((fn (lambda (h seq)
                (cl-find-if
                 (lambda (elm)
-                  (cl-find-if
-                   (lambda (e)
-                     (string= h (plist-get e :raw-value)))
-                   elm))
+                  (string= h (org-element-property :title elm)))
                 seq)))
          (lst (split-string queue "/"))
          (h1 (nth 0 lst))
          (h2 (nth 1 lst)))
     (when-let* ((tmp (funcall fn h1 (org-generate-get-heading)))
-                (tmp (funcall fn h2 tmp)))
+                (tmp (funcall fn h2 (org-element-contents tmp))))
       tmp)))
 
 (defun org-generate--create-string-for-export (heading)
@@ -131,12 +124,12 @@ The string returned consists of the target's heading and its subtree, its parent
 heading including the content before the first child , and the content before
 the first heading.  This is needed to avoid macro replacments in parts that are
 not relevant."
-  (let* ((start (plist-get (car heading) :begin))
+  (let* ((start (org-element-begin heading))
          regions)
     (save-excursion
       (save-match-data
         ;; Target heading and its subtree.
-        (push (cons start (plist-get (car heading) :end)) regions)
+        (push (cons start (org-element-end heading)) regions)
         ;; Parent's heading and content.
         (goto-char start)
         (org-up-heading-safe)
@@ -185,12 +178,11 @@ Properties are exported as well."
   "Generate file from HEADING.
 If ROOT is non-nil, omit some conditions."
   (if root
-      (dolist (elm heading)
+      (dolist (elm (org-element-contents heading))
         (org-generate-1 nil elm))
-    (when-let* ((heading* (car-safe heading))
-                (title (plist-get heading* :title))
+    (when-let* ((title (org-element-property :title heading))
                 (title* (mustache-render title org-generate-mustache-info)))
-      (when (and (not (string-suffix-p "/" title*)) (cdr heading))
+      (when (and (not (string-suffix-p "/" title*)) (org-element-contents heading))
         (error "Heading %s is not suffixed \"/\", but it have childlen" title*))
       (when (string-empty-p title*)
         (error "Heading %s will be empty string.  We could not create file with empty name" title))
@@ -200,22 +192,22 @@ If ROOT is non-nil, omit some conditions."
                (save-excursion
                  (save-restriction
                    (narrow-to-region
-                    (plist-get heading* :begin) (plist-get heading* :end))
+                    (org-element-begin heading) (org-element-end heading))
                    (goto-char (point-min))
                    (let ((case-fold-search t))
                      (when (search-forward "#+begin_src" nil 'noerror)
                        (goto-char (match-beginning 0))))
-                   (org-element-src-block-parser (point-max) nil)))))
+                   (org-element-at-point)))))
           (unless src
             (error "Node %s has no src block" title*))
           (let* ((file (expand-file-name title* default-directory))
-                 (srcbody (org-remove-indentation (plist-get (cadr src) :value)))
+                 (srcbody (org-remove-indentation (org-element-property :value src)))
                  (srcbody* (mustache-render srcbody org-generate-mustache-info)))
             (with-temp-file file
               (insert srcbody*))
             (when org-generate-show-save-message
               (message "[org-generate] Saved: %s" file)))))
-      (dolist (elm (cdr heading))
+      (dolist (elm (org-element-contents heading))
         (let ((default-directory
                 (expand-file-name title* default-directory)))
           (org-generate-1 nil elm))))))
@@ -243,7 +235,7 @@ If ROOT is non-nil, omit some conditions."
         (unwind-protect
             (let* ((fn (lambda (elm)
                          (org-entry-get-multivalued-property
-                          (plist-get (car heading) :begin)
+                          (org-element-begin heading)
                           (symbol-name elm))))
                    (root (funcall fn 'org-generate-root))
                    (vars (funcall fn 'org-generate-variable))
