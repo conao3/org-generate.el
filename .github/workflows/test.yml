@@ -1,7 +1,9 @@
 name: Main workflow
 on:
-  push: {branches: [master]}
-  pull_request: {branches: [master]}
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -10,17 +12,14 @@ jobs:
       fail-fast: false
       matrix:
         emacs_version:
-          - '26.1'
-          - '26.2'
-          - '26.3'
-          - '27.1'
-          - 'snapshot'
+          - 29.4
+          - snapshot
         include:
           - emacs_version: 'snapshot'
             allow_failure: true
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1.1.1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
       - uses: purcell/setup-emacs@master
         with:
           version: ${{ matrix.emacs_version }}
