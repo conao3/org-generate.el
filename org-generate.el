@@ -3,7 +3,7 @@
 ;; Copyright (C) 2020  Naoya Yamashita
 
 ;; Author: Naoya Yamashita <conao3@gmail.com>
-;; Version: 1.0.5
+;; Version: 1.0.6
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "26.1") (org "9.3") (mustache "0.23"))
 ;; URL: https://github.com/conao3/org-generate.el
