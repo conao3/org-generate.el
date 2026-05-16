@@ -164,50 +164,6 @@ The macro will be replaced with:
   :org-generate-root: ~/dev/repos/hugo-src/content/blog/
 #+END_SRC
 
-This could also be separated into a source block and macro. While the macro is
-evaluated at the place you use it (each time), the source block is evaluated
-where it actually is even when calling from a macro. Therefore it needs to be
-moved below the heading to make it work. This means that it will always use the
-same root and therefore it is not a good solution for this:
-
-#+BEGIN_SRC org
-  ,#+OPTIONS: prop:t
-  ,* hugo
-  :PROPERTIES:
-  :root:     ~/dev/repos/hugo-src/
-  :END:
-
-  ,#+NAME: root
-  ,#+BEGIN_SRC emacs-lisp :exports none :results raw :var path=""
-    (concat ":org-generate-root: " (org-entry-get-with-inheritance "root") (format "%s" path))
-  ,#+END_SRC
-  ,#+MACRO: hugo-root-path (eval (org-sbe "root" (path $$1)))
-
-  ,** page
-  :PROPERTIES:
-  {{{hugo-root-path(content/blog/)}}}
-  :END:
-
-  ,* another
-  :PROPERTIES:
-  :root:     ~/another/
-  :END:
-
-  ,** page
-  :PROPERTIES:
-  {{{hugo-root-path(content/blog/)}}}
-  :END:
-#+END_SRC
-
-In this case both are unexpectedly replaced with:
-
-#+BEGIN_SRC org
-  :org-generate-root: ~/dev/repos/hugo-src/content/blog/
-#+END_SRC
-
-When using a string for a variable with ~org-sbe~ it has to be prefixed with
-another ~$~. Here ~$$1~ or if a string like =$"string"=.
-
 ** Use variables from a emacs lisp list
 
 Store variables with emacs lisp and a source block and access them with ~org-sbe~:

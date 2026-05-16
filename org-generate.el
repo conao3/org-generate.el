@@ -90,7 +90,7 @@ syntax."
                           car)))
       (thread-last
         tmp-heading
-        org-element-parent
+        (org-element-property :parent)
         org-element-contents))))
 
 (defun org-generate-candidate ()
@@ -124,12 +124,12 @@ The string returned consists of the target's heading and its subtree, its parent
 heading including the content before the first child , and the content before
 the first heading.  This is needed to avoid macro replacments in parts that are
 not relevant."
-  (let* ((start (org-element-begin heading))
+  (let* ((start (org-element-property :begin heading))
          regions)
     (save-excursion
       (save-match-data
         ;; Target heading and its subtree.
-        (push (cons start (org-element-end heading)) regions)
+        (push (cons start (org-element-property :end heading)) regions)
         ;; Parent's heading and content.
         (goto-char start)
         (org-up-heading-safe)
@@ -192,7 +192,8 @@ If ROOT is non-nil, omit some conditions."
                (save-excursion
                  (save-restriction
                    (narrow-to-region
-                    (org-element-begin heading) (org-element-end heading))
+                    (org-element-property :begin heading)
+                    (org-element-property :end heading))
                    (goto-char (point-min))
                    (let ((case-fold-search t))
                      (when (search-forward "#+begin_src" nil 'noerror)
@@ -235,7 +236,7 @@ If ROOT is non-nil, omit some conditions."
         (unwind-protect
             (let* ((fn (lambda (elm)
                          (org-entry-get-multivalued-property
-                          (org-element-begin heading)
+                          (org-element-property :begin heading)
                           (symbol-name elm))))
                    (root (funcall fn 'org-generate-root))
                    (vars (funcall fn 'org-generate-variable))
