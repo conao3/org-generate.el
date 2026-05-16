@@ -277,36 +277,6 @@ title: \"xxx\"
 
 ### 1. First
 xxxx
-")
-
-    ((with-cort--org-generate-buffer "\
-* hugo
-:PROPERTIES:
-:root: ./
-:END:
-#+NAME: root
-#+BEGIN_SRC emacs-lisp :exports none :results raw :var path=\"\"
-  (concat \":org-generate-root: \"
-          (org-entry-get-with-inheritance \"root\")
-          (format \"%s\" path))
-#+END_SRC
-#+MACRO: hugo-root-path (eval (org-sbe \"root\" (path $$1)))
-** page
-:PROPERTIES:
-{{{hugo-root-path(content/blog/)}}}
-:END:
-"
-       (mkdir "content/blog" 'parents)
-       (let ((org-generate-root nil))
-         (org-generate "hugo/page"))
-       (cort--file-contents "content/blog/page.md"))
-     "\
----
-title: \"xxx\"
----
-
-### 1. First
-xxxx
 ")))
 
 (cort-deftest--org-generate org-generate/include-file
